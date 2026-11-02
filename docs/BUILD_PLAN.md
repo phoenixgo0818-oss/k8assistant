@@ -1,4 +1,4 @@
-# SWE Hub — Build Plan (5 phases × 5 steps)
+# K8assistant — Build Plan (5 phases × 5 steps)
 
 Derived from `doc/PLAN.md`. The whole build is grouped into **5 phases**, each with **5 steps**.
 After every step we stop: you test it, give feedback, and only then we move on.
@@ -35,22 +35,22 @@ So the model changes:
 ## Phase 1 — Foundation: Setup + CI/CD  🟨 current
 *(PLAN.md Phase 0)* Goal: one path *laptop → GitHub → internet*, with automated checks and deploys.
 
-### 1.1 Local toolchain ⬜
+### 1.1 Local toolchain ✅
 - **Build:** Node.js LTS via `nvm`; log in to `gh`.
 - **Test:** `node -v`, `npm -v`, `gh auth status`.
 - **Done when:** all three succeed.
 
-### 1.2 Next.js skeleton ⬜
+### 1.2 Next.js skeleton ✅
 - **Build:** `create-next-app` (TypeScript, Tailwind, ESLint, App Router, `src/`); add `CLAUDE.md`; rename `doc/` → `docs/`.
 - **Test:** `npm run dev` → http://localhost:3000; `npm run lint` and `npm run build` pass.
 - **Done when:** the starter page renders and lint + build are green.
 
-### 1.3 GitHub repo + branch workflow ⬜
+### 1.3 GitHub repo + branch workflow ✅
 - **Build:** Create the GitHub repo, push `main`; from now on all work happens on branches.
 - **Test:** You open your first PR from a branch (e.g. change the page title).
 - **Done when:** the repo is on GitHub and a PR is open.
 
-### 1.4 CI with GitHub Actions ⬜
+### 1.4 CI with GitHub Actions ✅
 - **Build:** `.github/workflows/ci.yml`: `npm ci`, lint, type check, build on every PR.
 - **Test:** Break lint on purpose → red; fix → green.
 - **Done when:** every PR shows a CI check and a broken change fails it.
