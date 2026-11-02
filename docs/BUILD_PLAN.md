@@ -65,12 +65,12 @@ So the model changes:
 ## Phase 2 — Pipeline Board v1  🟨 current
 *(PLAN.md Phase 1, with the application model)*
 
-### 2.1 Database + schema 🟨
+### 2.1 Database + schema ✅
 - **Build:** Supabase project + local Supabase CLI. Migration for `workspaces`, `stages`, `labels`, `companies`, `candidates`, `applications`, `application_labels`, `application_notes`, `activities` (all with `workspace_id`). Seed presets + 15 fake engineers with ~25 applications.
 - **Test:** Inspect tables in Supabase Studio; rebuild the DB from scratch.
 - **Done when:** a fresh DB comes only from migration + seed files.
 
-### 2.2 Read-only board + candidate view ⬜
+### 2.2 Read-only board + candidate view 🟨
 - **Build:** Board (stage columns with counts, application cards with company, role, labels); candidate page listing all their applications.
 - **Test:** One engineer with 3 applications shows 3 cards in different columns, and all 3 on their page.
 - **Done when:** both views match the seed data.
