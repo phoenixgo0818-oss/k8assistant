@@ -1,13 +1,23 @@
-export default function Home() {
+import { getBoard } from "@/lib/queries";
+import { StageColumn } from "@/components/StageColumn";
+
+export default async function BoardPage() {
+  const columns = await getBoard();
+  const total = columns.reduce((n, c) => n + c.cards.length, 0);
+
   return (
-    <main className="flex flex-1 flex-col items-center justify-center gap-4 bg-zinc-50 px-6 text-center dark:bg-black">
-      <h1 className="text-4xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
-        K8assistant
-      </h1>
-      <p className="max-w-md text-lg text-zinc-600 dark:text-zinc-400">
-        Pipeline board for the engineers I manage — every interview process, one board.
-      </p>
-      <p className="text-sm text-zinc-500">Phase 1 · Foundation</p>
+    <main className="flex min-h-0 flex-1 flex-col">
+      <div className="flex items-baseline gap-3 px-4 pt-5 pb-3 sm:px-6">
+        <h1 className="text-xl font-semibold text-zinc-900 dark:text-zinc-50">Pipeline</h1>
+        <p className="text-sm text-zinc-500">{total} active applications</p>
+      </div>
+
+      {/* Columns scroll sideways; the page itself doesn't */}
+      <div className="flex flex-1 gap-3 overflow-x-auto px-4 pb-6 sm:px-6">
+        {columns.map((column) => (
+          <StageColumn key={column.id} column={column} />
+        ))}
+      </div>
     </main>
   );
 }
