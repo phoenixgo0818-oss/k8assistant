@@ -32,7 +32,7 @@ So the model changes:
 
 ---
 
-## Phase 1 — Foundation: Setup + CI/CD  🟨 current
+## Phase 1 — Foundation: Setup + CI/CD  ✅ done (https://k8assistant.vercel.app)
 *(PLAN.md Phase 0)* Goal: one path *laptop → GitHub → internet*, with automated checks and deploys.
 
 ### 1.1 Local toolchain ✅
@@ -55,17 +55,17 @@ So the model changes:
 - **Test:** Break lint on purpose → red; fix → green.
 - **Done when:** every PR shows a CI check and a broken change fails it.
 
-### 1.5 CD with Vercel ⬜
+### 1.5 CD with Vercel ✅
 - **Build:** Import the repo into Vercel (Hobby): preview URL per PR, production on merge; branch protection (CI must pass).
 - **Test:** PR → preview works; merge → production updates.
 - **Done when:** *"Opening a PR runs checks automatically, and merging to main deploys."*
 
 ---
 
-## Phase 2 — Pipeline Board v1
+## Phase 2 — Pipeline Board v1  🟨 current
 *(PLAN.md Phase 1, with the application model)*
 
-### 2.1 Database + schema ⬜
+### 2.1 Database + schema 🟨
 - **Build:** Supabase project + local Supabase CLI. Migration for `workspaces`, `stages`, `labels`, `companies`, `candidates`, `applications`, `application_labels`, `application_notes`, `activities` (all with `workspace_id`). Seed presets + 15 fake engineers with ~25 applications.
 - **Test:** Inspect tables in Supabase Studio; rebuild the DB from scratch.
 - **Done when:** a fresh DB comes only from migration + seed files.
