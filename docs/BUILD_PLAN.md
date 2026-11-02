@@ -70,12 +70,12 @@ So the model changes:
 - **Test:** Inspect tables in Supabase Studio; rebuild the DB from scratch.
 - **Done when:** a fresh DB comes only from migration + seed files.
 
-### 2.2 Read-only board + candidate view 🟨
+### 2.2 Read-only board + candidate view ✅
 - **Build:** Board (stage columns with counts, application cards with company, role, labels); candidate page listing all their applications.
 - **Test:** One engineer with 3 applications shows 3 cards in different columns, and all 3 on their page.
 - **Done when:** both views match the seed data.
 
-### 2.3 Create + drag and drop ⬜
+### 2.3 Create + drag and drop 🟨
 - **Build:** "+ New candidate" (name only) and "+ New application" (candidate + company + role → New); dnd-kit drag with fractional `rank`; activity row on stage change (synchronous).
 - **Test:** Add an engineer and two applications; drag cards; refresh.
 - **Done when:** new cards appear instantly and positions survive refresh.

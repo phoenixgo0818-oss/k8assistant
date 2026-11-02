@@ -428,7 +428,40 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      create_application: {
+        Args: {
+          p_candidate_id: string
+          p_company_name: string
+          p_rank: string
+          p_role: string
+          p_stage_id: string
+          p_workspace_id: string
+        }
+        Returns: string
+      }
+      create_candidate: {
+        Args: {
+          p_email?: string
+          p_headline?: string
+          p_name: string
+          p_skills?: string[]
+          p_workspace_id: string
+        }
+        Returns: string
+      }
+      find_or_create_company: {
+        Args: { p_name: string; p_workspace_id: string }
+        Returns: string
+      }
+      move_application: {
+        Args: {
+          p_application_id: string
+          p_rank: string
+          p_stage_id: string
+          p_workspace_id: string
+        }
+        Returns: undefined
+      }
     }
     Enums: {
       [_ in never]: never

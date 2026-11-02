@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getCandidate } from "@/lib/queries";
+import { getCandidate, getFormOptions } from "@/lib/queries";
+import { NewApplicationButton } from "@/components/CreateButtons";
 import { LabelChip, StageDot } from "@/components/LabelChip";
 
 export async function generateMetadata(props: PageProps<"/candidates/[id]">): Promise<Metadata> {
@@ -12,7 +13,7 @@ export async function generateMetadata(props: PageProps<"/candidates/[id]">): Pr
 
 export default async function CandidatePage(props: PageProps<"/candidates/[id]">) {
   const { id } = await props.params;
-  const candidate = await getCandidate(id);
+  const [candidate, options] = await Promise.all([getCandidate(id), getFormOptions()]);
   if (!candidate) notFound(); // renders the 404 page
 
   const facts = [
@@ -47,9 +48,12 @@ export default async function CandidatePage(props: PageProps<"/candidates/[id]">
       <div className="mt-6 grid gap-6 md:grid-cols-[1fr_16rem]">
         {/* Processes: the reason this page exists */}
         <section>
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-500">
-            Processes ({candidate.applications.length})
-          </h2>
+          <div className="flex items-center justify-between gap-3">
+            <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-500">
+              Processes ({candidate.applications.length})
+            </h2>
+            <NewApplicationButton options={options} candidateId={candidate.id} label="+ Add process" />
+          </div>
           <ul className="mt-2 space-y-2">
             {candidate.applications.map((app) => (
               <li

@@ -26,7 +26,9 @@ doing it. I am new to coding.
 - Stack: Next.js (App Router) + TypeScript + Tailwind, Supabase (Postgres),
   Vercel, GitHub Actions; RabbitMQ (CloudAMQP) from Phase 4.
 - Board card = application (candidate × company × role), not a candidate.
-- Current phase: Phase 2 — Pipeline Board v1 (step 2.2 read-only board).
+- Current phase: Phase 2 — Pipeline Board v1 (step 2.3 create + drag and drop).
+- Writes go through Server Actions (`src/app/actions.ts`, zod-validated) that
+  call Postgres functions (RPC) so each change + its activity row is one transaction.
 - Production: https://k8assistant.vercel.app
 - Supabase project ref: iyusfcsxadcrnxwqrgxb (dev DB, fake data).
 - Data access is server-only (`src/lib/supabase.ts`, secret key, `server-only`).
