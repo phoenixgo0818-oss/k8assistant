@@ -24,7 +24,8 @@ doing it. I am new to coding.
 - Stack: Next.js (App Router) + TypeScript + Tailwind, Supabase (Postgres),
   Vercel, GitHub Actions; RabbitMQ (CloudAMQP) from Phase 4.
 - Board card = application (candidate × company × role), not a candidate.
-- Current phase: Phase 1 — Foundation (Setup + CI/CD).
+- Current phase: Phase 2 — Pipeline Board v1 (step 2.1 database).
+- Production: https://k8assistant.vercel.app
 
 ## Commands
 - `npm run dev` — local dev server (http://localhost:3000)
