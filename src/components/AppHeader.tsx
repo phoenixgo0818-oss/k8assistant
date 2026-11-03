@@ -13,6 +13,9 @@ export function AppHeader() {
         <Link href="/candidates" className="hover:text-zinc-900 dark:hover:text-zinc-100">
           Candidates
         </Link>
+        <Link href="/companies" className="hover:text-zinc-900 dark:hover:text-zinc-100">
+          Companies
+        </Link>
       </nav>
     </header>
   );

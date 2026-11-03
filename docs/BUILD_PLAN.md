@@ -80,10 +80,16 @@ So the model changes:
 - **Test:** Add an engineer and two applications; drag cards; refresh.
 - **Done when:** new cards appear instantly and positions survive refresh.
 
-### 2.4 Detail panel 🟨
+### 2.4 Detail panel ✅
 - **Build:** Side panel per application: candidate fields (shared), stage dropdown, labels (add / remove / create), notes with timestamp + stage, activity history.
 - **Test:** Edit a skill (it changes on all of that engineer's cards); add a note; change labels; check activity.
 - **Done when:** every change appears in activity; notes show timestamp + stage.
+
+### 2.4b Feedback fixes ✅
+- Drag into empty columns (and no more drag crash loops); drop line shows where a card lands.
+- Remove engineers: **Archive** (hidden, restorable from Candidates → Archived) or **Delete permanently**; remove a single process.
+- Notes: edit and delete individual notes; note count on cards.
+- **Companies** page: list, add, edit (website, notes), delete when empty; company page shows its engineers' processes.
 
 ### 2.5 Custom stages/labels, search, filters, archive ⬜
 - **Build:** Manage stages and labels; search by name / skill / company; filter by label, role, company; collapse final columns; archive.

@@ -357,3 +357,167 @@ export async function updateProfile(_prev: FormState, formData: FormData): Promi
   refresh();
   return { ok: true, message: "Saved", submittedAt: Date.now() };
 }
+
+// ---------------------------------------------------------------------------
+// Removing engineers and processes
+// ---------------------------------------------------------------------------
+
+/** Archive = hide from the board and lists, keep everything. Reversible. */
+export async function setCandidateArchived(input: { candidateId: string; archived: boolean }): Promise<{ ok: boolean }> {
+  const parsed = z.object({ candidateId: uuid, archived: z.boolean() }).safeParse(input);
+  if (!parsed.success) return { ok: false };
+  const { error } = await db().rpc("set_candidate_archived", {
+    p_workspace_id: DEFAULT_WORKSPACE_ID,
+    p_candidate_id: parsed.data.candidateId,
+    p_archived: parsed.data.archived,
+  });
+  if (error) {
+    console.error("setCandidateArchived failed", error);
+    return { ok: false };
+  }
+  refresh();
+  return { ok: true };
+}
+
+/** Permanent: the engineer, all their processes, notes and history are gone. */
+export async function deleteCandidate(input: { candidateId: string }): Promise<{ ok: boolean }> {
+  const parsed = z.object({ candidateId: uuid }).safeParse(input);
+  if (!parsed.success) return { ok: false };
+  const { error } = await db()
+    .from("candidates")
+    .delete()
+    .eq("workspace_id", DEFAULT_WORKSPACE_ID)
+    .eq("id", parsed.data.candidateId);
+  if (error) {
+    console.error("deleteCandidate failed", error);
+    return { ok: false };
+  }
+  refresh();
+  return { ok: true };
+}
+
+/** Permanent: one process (card) with its notes, labels and card history. */
+export async function deleteApplication(input: { applicationId: string }): Promise<{ ok: boolean }> {
+  const parsed = z.object({ applicationId: uuid }).safeParse(input);
+  if (!parsed.success) return { ok: false };
+  const { error } = await db().rpc("delete_application", {
+    p_workspace_id: DEFAULT_WORKSPACE_ID,
+    p_application_id: parsed.data.applicationId,
+  });
+  if (error) {
+    console.error("deleteApplication failed", error);
+    return { ok: false };
+  }
+  refresh();
+  return { ok: true };
+}
+
+// ---------------------------------------------------------------------------
+// Editing and deleting individual notes
+// ---------------------------------------------------------------------------
+export async function updateNote(_prev: FormState, formData: FormData): Promise<FormState> {
+  const parsed = z
+    .object({ noteId: uuid, body: z.string().trim().min(1, "A note can't be empty").max(5000) })
+    .safeParse(formValues(formData));
+  if (!parsed.success) return invalid(parsed.error);
+
+  const { error } = await db()
+    .from("application_notes")
+    .update({ body: parsed.data.body })
+    .eq("workspace_id", DEFAULT_WORKSPACE_ID)
+    .eq("id", parsed.data.noteId);
+  if (error) {
+    console.error("updateNote failed", error);
+    return { ok: false, message: "Couldn't save the note." };
+  }
+  refresh();
+  return { ok: true, submittedAt: Date.now() };
+}
+
+export async function deleteNote(input: { noteId: string }): Promise<{ ok: boolean }> {
+  const parsed = z.object({ noteId: uuid }).safeParse(input);
+  if (!parsed.success) return { ok: false };
+  const { error } = await db()
+    .from("application_notes")
+    .delete()
+    .eq("workspace_id", DEFAULT_WORKSPACE_ID)
+    .eq("id", parsed.data.noteId);
+  if (error) {
+    console.error("deleteNote failed", error);
+    return { ok: false };
+  }
+  refresh();
+  return { ok: true };
+}
+
+// ---------------------------------------------------------------------------
+// Companies
+// ---------------------------------------------------------------------------
+const companySchema = z.object({
+  name: z.string().trim().min(1, "Name is required").max(120),
+  website: z
+    .union([z.literal(""), z.url({ protocol: /^https?$/, error: "Must start with http:// or https://" })])
+    .optional()
+    .transform((v) => v || null),
+  context: z
+    .string()
+    .trim()
+    .max(5000)
+    .optional()
+    .transform((v) => v || null),
+});
+
+const DUPLICATE = "23505"; // Postgres error code: unique constraint violated
+
+export async function createCompany(_prev: FormState, formData: FormData): Promise<FormState> {
+  const parsed = companySchema.safeParse(formValues(formData));
+  if (!parsed.success) return invalid(parsed.error);
+
+  const { error } = await db()
+    .from("companies")
+    .insert({ workspace_id: DEFAULT_WORKSPACE_ID, ...parsed.data });
+  if (error) {
+    if (error.code === DUPLICATE) return { ok: false, fieldErrors: { name: ["A company with this name already exists"] } };
+    console.error("createCompany failed", error);
+    return { ok: false, message: "Couldn't save the company." };
+  }
+  refresh();
+  return { ok: true, submittedAt: Date.now() };
+}
+
+export async function updateCompany(_prev: FormState, formData: FormData): Promise<FormState> {
+  const parsed = companySchema.extend({ companyId: uuid }).safeParse(formValues(formData));
+  if (!parsed.success) return invalid(parsed.error);
+  const { companyId, ...fields } = parsed.data;
+
+  const { error } = await db()
+    .from("companies")
+    .update(fields)
+    .eq("workspace_id", DEFAULT_WORKSPACE_ID)
+    .eq("id", companyId);
+  if (error) {
+    if (error.code === DUPLICATE) return { ok: false, fieldErrors: { name: ["A company with this name already exists"] } };
+    console.error("updateCompany failed", error);
+    return { ok: false, message: "Couldn't save the company." };
+  }
+  refresh();
+  return { ok: true, message: "Saved", submittedAt: Date.now() };
+}
+
+/** Only companies with no processes can be deleted (the DB enforces this too). */
+export async function deleteCompany(input: { companyId: string }): Promise<{ ok: boolean; message?: string }> {
+  const parsed = z.object({ companyId: uuid }).safeParse(input);
+  if (!parsed.success) return { ok: false };
+  const { error } = await db()
+    .from("companies")
+    .delete()
+    .eq("workspace_id", DEFAULT_WORKSPACE_ID)
+    .eq("id", parsed.data.companyId);
+  if (error) {
+    if (error.code === "23503") return { ok: false, message: "Remove this company's processes first." }; // foreign key
+    console.error("deleteCompany failed", error);
+    return { ok: false };
+  }
+  refresh();
+  return { ok: true };
+}

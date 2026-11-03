@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { Activity, ApplicationDetail } from "@/lib/queries";
-import { LabelPicker, LocalTime, NoteForm, PanelShell, ProfileForm, StagePicker } from "./PanelParts";
+import { ArchiveCandidateButton, DeleteApplicationButton } from "../RemoveButtons";
+import { LabelPicker, LocalTime, NoteForm, NoteItem, PanelShell, ProfileForm, StagePicker } from "./PanelParts";
 
 const FIELD_NAMES: Record<string, string> = {
   name: "name",
@@ -24,6 +25,12 @@ function describe(a: Activity): React.ReactNode {
       return <>Process started at {b(a.toValue)}</>;
     case "stage_changed":
       return <>Moved {b(a.fromValue)} → {b(a.toValue)}</>;
+    case "candidate_archived":
+      return <>Engineer archived</>;
+    case "candidate_restored":
+      return <>Engineer restored</>;
+    case "application_deleted":
+      return <>Process removed: {b(a.fromValue)}</>;
     case "label_added":
       return <>Label {b(a.toValue)} added</>;
     case "label_removed":
@@ -52,7 +59,10 @@ export function DetailPanel({ detail }: { detail: ApplicationDetail }) {
       {/* Header */}
       <div>
         <p className="text-sm text-zinc-500">
-          {detail.company.name} · {detail.role}
+          <Link href={`/companies/${detail.company.id}`} className="font-medium text-zinc-700 hover:underline dark:text-zinc-300">
+            {detail.company.name}
+          </Link>{" "}
+          · {detail.role}
         </p>
         <h2 className="text-xl font-semibold text-zinc-900 dark:text-zinc-50">{candidate.name}</h2>
         <Link
@@ -75,13 +85,7 @@ export function DetailPanel({ detail }: { detail: ApplicationDetail }) {
         <NoteForm applicationId={detail.id} />
         <ul className="space-y-2">
           {detail.notes.map((n) => (
-            <li key={n.id} className="rounded-lg bg-zinc-50 p-3 text-sm dark:bg-zinc-900">
-              <p className="whitespace-pre-line text-zinc-900 dark:text-zinc-100">{n.body}</p>
-              <p className="mt-1.5 text-xs text-zinc-500">
-                <LocalTime iso={n.createdAt} />
-                {n.stageName && <> · during <span className="font-medium">{n.stageName}</span></>}
-              </p>
-            </li>
+            <NoteItem key={n.id} note={n} />
           ))}
         </ul>
       </section>
@@ -119,6 +123,12 @@ export function DetailPanel({ detail }: { detail: ApplicationDetail }) {
             </li>
           ))}
         </ol>
+      </section>
+
+      {/* Removing */}
+      <section className="flex flex-wrap items-center justify-between gap-3 border-t border-zinc-200 pt-4 dark:border-zinc-800">
+        <DeleteApplicationButton applicationId={detail.id} what={`${candidate.name} at ${detail.company.name}`} redirectTo="/" />
+        <ArchiveCandidateButton candidateId={candidate.id} name={candidate.name} redirectTo="/" />
       </section>
     </PanelShell>
   );

@@ -3,9 +3,9 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useActionState, useEffect, useRef, useState, useTransition } from "react";
-import { addNote, changeStage, createLabelOnCard, setLabel, updateProfile, type FormState } from "@/app/actions";
+import { addNote, changeStage, createLabelOnCard, deleteNote, setLabel, updateNote, updateProfile, type FormState } from "@/app/actions";
 import { LABEL_COLORS } from "@/lib/constants";
-import type { ApplicationDetail, Label } from "@/lib/queries";
+import type { ApplicationDetail, Label, Note } from "@/lib/queries";
 import { LabelChip } from "../LabelChip";
 import { useSubmitKeepingValues } from "../useSubmitKeepingValues";
 import { Field, inputClass, primaryButtonClass, secondaryButtonClass } from "../Modal";
@@ -276,5 +276,110 @@ export function ProfileForm({ candidate }: { candidate: ApplicationDetail["candi
         </button>
       </div>
     </form>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// One note: read, edit in place, or delete
+// ---------------------------------------------------------------------------
+export function NoteItem({ note }: { note: Note }) {
+  const [editing, setEditing] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [state, action, saving] = useActionState(updateNote, initial);
+  const onSubmit = useSubmitKeepingValues(action);
+  const [deleting, startDelete] = useTransition();
+  const [deleteFailed, setDeleteFailed] = useState(false);
+
+  // Leave edit mode once a save succeeds
+  const lastSaved = useRef<number | undefined>(undefined);
+  useEffect(() => {
+    if (state.ok && state.submittedAt !== lastSaved.current) {
+      lastSaved.current = state.submittedAt;
+      setEditing(false);
+    }
+  }, [state]);
+
+  const meta = (
+    <p className="text-xs text-zinc-500">
+      <LocalTime iso={note.createdAt} />
+      {note.stageName && <> · during <span className="font-medium">{note.stageName}</span></>}
+    </p>
+  );
+
+  if (editing) {
+    return (
+      <li className="rounded-lg bg-zinc-50 p-3 text-sm dark:bg-zinc-900">
+        <form onSubmit={onSubmit} className="space-y-2">
+          <input type="hidden" name="noteId" value={note.id} />
+          <textarea
+            name="body"
+            required
+            rows={4}
+            maxLength={5000}
+            defaultValue={note.body}
+            autoFocus
+            aria-label="Edit note"
+            className={inputClass}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) e.currentTarget.form?.requestSubmit();
+            }}
+          />
+          {(state.fieldErrors?.body || (!state.ok && state.message)) && (
+            <p className="text-xs text-red-600">{state.fieldErrors?.body?.join(", ") ?? state.message}</p>
+          )}
+          <div className="flex items-center justify-between">
+            {meta}
+            <div className="flex gap-2">
+              <button type="button" className={secondaryButtonClass} onClick={() => setEditing(false)}>
+                Cancel
+              </button>
+              <button type="submit" disabled={saving} className={primaryButtonClass}>
+                {saving ? "Saving…" : "Save"}
+              </button>
+            </div>
+          </div>
+        </form>
+      </li>
+    );
+  }
+
+  return (
+    <li className="group rounded-lg bg-zinc-50 p-3 text-sm dark:bg-zinc-900">
+      <p className="whitespace-pre-line text-zinc-900 dark:text-zinc-100">{note.body}</p>
+      <div className="mt-1.5 flex items-center justify-between gap-2">
+        {meta}
+        {confirmDelete ? (
+          <span className="flex items-center gap-2 text-xs">
+            <span className="text-zinc-600 dark:text-zinc-400">Delete this note?</span>
+            <button
+              type="button"
+              disabled={deleting}
+              className="font-medium text-red-600 hover:underline"
+              onClick={() =>
+                startDelete(async () => {
+                  const r = await deleteNote({ noteId: note.id });
+                  if (!r.ok) setDeleteFailed(true);
+                })
+              }
+            >
+              {deleting ? "Deleting…" : "Yes, delete"}
+            </button>
+            <button type="button" className="text-zinc-500 hover:underline" onClick={() => setConfirmDelete(false)}>
+              No
+            </button>
+          </span>
+        ) : (
+          <span className="flex gap-3 text-xs">
+            <button type="button" className="text-zinc-500 hover:text-zinc-900 hover:underline dark:hover:text-zinc-100" onClick={() => setEditing(true)}>
+              Edit
+            </button>
+            <button type="button" className="text-zinc-500 hover:text-red-600 hover:underline" onClick={() => setConfirmDelete(true)}>
+              Delete
+            </button>
+          </span>
+        )}
+      </div>
+      {deleteFailed && <p className="mt-1 text-xs text-red-600">Couldn&apos;t delete the note.</p>}
+    </li>
   );
 }
