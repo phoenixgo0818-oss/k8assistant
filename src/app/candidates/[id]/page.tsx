@@ -60,14 +60,14 @@ export default async function CandidatePage(props: PageProps<"/candidates/[id]">
                 key={app.id}
                 className="rounded-lg border border-zinc-200 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-900"
               >
-                <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                <Link href={`/?card=${app.id}`} className="flex flex-wrap items-center gap-x-3 gap-y-1 hover:underline">
                   <p className="font-medium text-zinc-900 dark:text-zinc-100">{app.company.name}</p>
                   <p className="text-sm text-zinc-600 dark:text-zinc-400">{app.role}</p>
                   <span className="ml-auto inline-flex items-center gap-1.5 text-sm font-medium text-zinc-700 dark:text-zinc-300">
                     <StageDot color={app.stage.color} />
                     {app.stage.name}
                   </span>
-                </div>
+                </Link>
                 {app.labels.length > 0 && (
                   <div className="mt-2 flex flex-wrap gap-1">
                     {app.labels.map((l) => (

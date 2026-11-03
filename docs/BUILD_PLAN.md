@@ -75,12 +75,12 @@ So the model changes:
 - **Test:** One engineer with 3 applications shows 3 cards in different columns, and all 3 on their page.
 - **Done when:** both views match the seed data.
 
-### 2.3 Create + drag and drop 🟨
+### 2.3 Create + drag and drop ✅
 - **Build:** "+ New candidate" (name only) and "+ New application" (candidate + company + role → New); dnd-kit drag with fractional `rank`; activity row on stage change (synchronous).
 - **Test:** Add an engineer and two applications; drag cards; refresh.
 - **Done when:** new cards appear instantly and positions survive refresh.
 
-### 2.4 Detail panel ⬜
+### 2.4 Detail panel 🟨
 - **Build:** Side panel per application: candidate fields (shared), stage dropdown, labels (add / remove / create), notes with timestamp + stage, activity history.
 - **Test:** Edit a skill (it changes on all of that engineer's cards); add a note; change labels; check activity.
 - **Done when:** every change appears in activity; notes show timestamp + stage.
