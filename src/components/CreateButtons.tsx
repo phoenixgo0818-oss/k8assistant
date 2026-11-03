@@ -82,8 +82,8 @@ export function NewCandidateButton({ options }: { options: FormOptions }) {
             <input name="skills" className={inputClass} />
           </Field>
 
-          <fieldset className="rounded-lg border border-dashed border-zinc-300 p-3 dark:border-zinc-700">
-            <legend className="px-1 text-xs font-medium text-zinc-500">First application (optional)</legend>
+          <fieldset className="rounded-lg border border-dashed border-slate-300 p-3 dark:border-slate-700">
+            <legend className="px-1 text-xs font-medium text-slate-500">First application (optional)</legend>
             <div className="space-y-3">
               <CompanyInput companies={options.companies} error={e.company} />
               <div className="grid gap-3 sm:grid-cols-2">

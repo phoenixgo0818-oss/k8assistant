@@ -79,6 +79,8 @@ export function Board({ columns: serverColumns, selectedId }: { columns: Columns
 
   const [activeCard, setActiveCard] = useState<Card | null>(null);
   const [dropTarget, setDropTarget] = useState<DropTarget | null>(null); // only for OTHER columns
+  // Hovering a card spotlights that engineer: their cards stay, others fade
+  const [focusId, setFocusId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [, startTransition] = useTransition();
   const lastDragEnd = useRef(0);
@@ -120,6 +122,7 @@ export function Board({ columns: serverColumns, selectedId }: { columns: Columns
   );
 
   function onDragStart({ active }: DragStartEvent) {
+    setFocusId(null);
     const ci = findColumnIndex(columns, String(active.id));
     setActiveCard(columns[ci]?.cards.find((c) => c.id === active.id) ?? null);
     setError(null);
@@ -207,6 +210,8 @@ export function Board({ columns: serverColumns, selectedId }: { columns: Columns
               lastDragEnd={lastDragEnd}
               selectedId={selectedId}
               dropIndex={dropTarget?.columnId === column.id ? dropTarget.index : null}
+              focusId={activeCard ? null : focusId}
+              onFocusEngineer={setFocusId}
             />
           ))}
         </div>
@@ -227,12 +232,16 @@ function Column({
   lastDragEnd,
   selectedId,
   dropIndex,
+  focusId,
+  onFocusEngineer,
 }: {
   column: BoardColumn;
   lastDragEnd: React.RefObject<number>;
   selectedId?: string;
   /** Where a card from another column would land (null = not targeted) */
   dropIndex: number | null;
+  focusId: string | null;
+  onFocusEngineer: (candidateId: string | null) => void;
 }) {
   // The column itself is a drop target, so empty columns accept cards too
   const { setNodeRef } = useDroppable({ id: column.id });
@@ -241,18 +250,14 @@ function Column({
   return (
     <section
       aria-label={`${column.name}, ${column.cards.length} cards`}
-      className={`flex w-72 shrink-0 flex-col rounded-xl p-2 transition-colors ${
-        targeted
-          ? "bg-indigo-50 ring-2 ring-indigo-400/60 dark:bg-indigo-950/40"
-          : column.isFinal
-            ? "bg-zinc-100/60 dark:bg-zinc-900/40"
-            : "bg-zinc-100 dark:bg-zinc-900/70"
+      className={`glass flex w-[17.5rem] shrink-0 flex-col rounded-2xl p-2 transition ${
+        targeted ? "ring-2 ring-sky-400/70 !bg-sky-100/60 dark:!bg-sky-900/30" : column.isFinal ? "opacity-90" : ""
       }`}
     >
       <header className="flex items-center gap-2 px-2 py-1.5">
         <StageDot color={column.color} />
-        <h2 className="text-sm font-semibold text-zinc-800 dark:text-zinc-200">{column.name}</h2>
-        <span className="ml-auto rounded-full bg-zinc-200 px-2 text-xs font-medium text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400">
+        <h2 className="text-sm font-semibold text-slate-800 dark:text-slate-100">{column.name}</h2>
+        <span className="ml-auto rounded-full bg-white/70 px-2 text-xs font-semibold text-slate-600 shadow-sm dark:bg-slate-800/80 dark:text-slate-300">
           {column.cards.length}
         </span>
       </header>
@@ -267,12 +272,14 @@ function Column({
               selected={card.id === selectedId}
               // Drop line drawn with a shadow, so it never changes the layout
               dropLine={dropIndex === i ? "before" : dropIndex === column.cards.length && i === column.cards.length - 1 ? "after" : null}
+              dimmed={focusId !== null && card.candidate.id !== focusId}
+              onFocusEngineer={onFocusEngineer}
             />
           ))}
           {column.cards.length === 0 && (
             <p
               className={`rounded-lg border border-dashed p-3 text-center text-xs ${
-                targeted ? "border-indigo-400 text-indigo-600 dark:text-indigo-300" : "border-zinc-300 text-zinc-500 dark:border-zinc-700"
+                targeted ? "border-sky-400 text-sky-600 dark:text-sky-300" : "border-slate-300/80 text-slate-400 dark:border-slate-700"
               }`}
             >
               Drop here
@@ -289,11 +296,16 @@ function SortableCard({
   lastDragEnd,
   selected,
   dropLine,
+  dimmed,
+  onFocusEngineer,
 }: {
   card: Card;
   lastDragEnd: React.RefObject<number>;
   selected: boolean;
   dropLine: "before" | "after" | null;
+  /** Another engineer is spotlighted */
+  dimmed: boolean;
+  onFocusEngineer: (candidateId: string | null) => void;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: card.id });
 
@@ -301,13 +313,15 @@ function SortableCard({
     <div
       ref={setNodeRef}
       style={{ transform: CSS.Transform.toString(transform), transition }}
-      className={`touch-manipulation rounded-lg ${isDragging ? "opacity-40" : ""} ${
+      className={`touch-manipulation rounded-xl transition-[opacity,filter] duration-200 ${isDragging ? "opacity-40" : dimmed ? "opacity-35 saturate-50" : ""} ${
         dropLine === "before"
-          ? "shadow-[0_-6px_0_-2px_rgb(99_102_241)]"
+          ? "shadow-[0_-6px_0_-2px_rgb(14_165_233)]"
           : dropLine === "after"
-            ? "shadow-[0_6px_0_-2px_rgb(99_102_241)]"
+            ? "shadow-[0_6px_0_-2px_rgb(14_165_233)]"
             : ""
       }`}
+      onPointerEnter={(e) => e.pointerType === "mouse" && onFocusEngineer(card.candidate.id)}
+      onPointerLeave={() => onFocusEngineer(null)}
       {...attributes}
       {...listeners}
       // A drop can end with a click on the card; don't treat that as "open"

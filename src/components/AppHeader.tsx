@@ -1,22 +1,22 @@
 import Link from "next/link";
+import { Suspense } from "react";
+import { ActiveNav, NavLinks } from "./NavLinks";
 
+// The header is static (prerendered). Only the "which tab is active" part
+// reads the URL, so it sits in its own <Suspense>: until it resolves, the
+// same links render without a highlight.
 export function AppHeader() {
   return (
-    <header className="sticky top-0 z-10 flex h-14 items-center gap-6 border-b border-zinc-200 bg-white/90 px-4 backdrop-blur dark:border-zinc-800 dark:bg-zinc-950/90 sm:px-6">
-      <Link href="/" className="font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
-        K8assistant
+    <header className="glass-strong sticky top-0 z-30 flex h-14 items-center gap-4 rounded-none border-x-0 border-t-0 px-4 sm:gap-8 sm:px-6">
+      <Link href="/" className="flex items-center gap-2 font-semibold tracking-tight">
+        <span aria-hidden className="brand-gradient flex size-7 items-center justify-center rounded-lg text-sm font-bold text-white shadow-md shadow-blue-500/30">
+          K8
+        </span>
+        <span className="brand-text hidden text-lg sm:inline">K8assistant</span>
       </Link>
-      <nav className="flex gap-4 text-sm text-zinc-600 dark:text-zinc-400">
-        <Link href="/" className="hover:text-zinc-900 dark:hover:text-zinc-100">
-          Board
-        </Link>
-        <Link href="/candidates" className="hover:text-zinc-900 dark:hover:text-zinc-100">
-          Candidates
-        </Link>
-        <Link href="/companies" className="hover:text-zinc-900 dark:hover:text-zinc-100">
-          Companies
-        </Link>
-      </nav>
+      <Suspense fallback={<NavLinks pathname={null} />}>
+        <ActiveNav />
+      </Suspense>
     </header>
   );
 }

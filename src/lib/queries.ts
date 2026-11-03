@@ -23,7 +23,7 @@ export type ApplicationCard = {
   role: string;
   rank: string;
   stageId: string;
-  candidate: { id: string; name: string; headline: string | null };
+  candidate: { id: string; name: string; headline: string | null; color: string };
   company: { id: string; name: string };
   labels: Label[];
   noteCount: number;
@@ -35,7 +35,7 @@ export type BoardColumn = Stage & { cards: ApplicationCard[] };
 // Supabase follows foreign keys: `candidate:candidates(...)` = join + rename.
 const APPLICATION_SELECT = `
   id, role, rank, stage_id,
-  candidate:candidates!inner ( id, name, headline, archived_at ),
+  candidate:candidates!inner ( id, name, headline, color, archived_at ),
   company:companies ( id, name ),
   application_labels ( label:labels ( id, name, color ) ),
   application_notes ( count )
@@ -46,7 +46,7 @@ type ApplicationRow = {
   role: string;
   rank: string;
   stage_id: string;
-  candidate: { id: string; name: string; headline: string | null };
+  candidate: { id: string; name: string; headline: string | null; color: string };
   company: { id: string; name: string };
   application_labels: { label: Label }[];
   application_notes: { count: number }[];
@@ -62,6 +62,7 @@ function toCard(row: ApplicationRow): ApplicationCard {
       id: row.candidate.id,
       name: row.candidate.name,
       headline: row.candidate.headline,
+      color: row.candidate.color,
     },
     company: row.company,
     labels: row.application_labels
@@ -116,6 +117,7 @@ export type CandidateSummary = {
   id: string;
   name: string;
   headline: string | null;
+  color: string;
   yearsExperience: number | null;
   skills: string[];
   activeApplications: number;
@@ -125,7 +127,7 @@ export async function getCandidates(): Promise<CandidateSummary[]> {
   await connection();
   const { data, error } = await db()
     .from("candidates")
-    .select("id, name, headline, years_experience, skills, applications ( id, archived_at )")
+    .select("id, name, headline, color, years_experience, skills, applications ( id, archived_at )")
     .eq("workspace_id", DEFAULT_WORKSPACE_ID)
     .is("archived_at", null)
     .order("name");
@@ -136,22 +138,23 @@ export async function getCandidates(): Promise<CandidateSummary[]> {
     id: c.id,
     name: c.name,
     headline: c.headline,
+    color: c.color,
     yearsExperience: c.years_experience,
     skills: c.skills,
     activeApplications: c.applications.filter((a) => a.archived_at === null).length,
   }));
 }
 
-export async function getArchivedCandidates(): Promise<{ id: string; name: string; archivedAt: string }[]> {
+export async function getArchivedCandidates(): Promise<{ id: string; name: string; color: string; archivedAt: string }[]> {
   await connection();
   const { data, error } = await db()
     .from("candidates")
-    .select("id, name, archived_at")
+    .select("id, name, color, archived_at")
     .eq("workspace_id", DEFAULT_WORKSPACE_ID)
     .not("archived_at", "is", null)
     .order("archived_at", { ascending: false });
   if (error) throw new Error(`Loading archived candidates failed: ${error.message}`);
-  return data.map((c) => ({ id: c.id, name: c.name, archivedAt: c.archived_at! }));
+  return data.map((c) => ({ id: c.id, name: c.name, color: c.color, archivedAt: c.archived_at! }));
 }
 
 // ---------------------------------------------------------------------------
@@ -161,6 +164,7 @@ export type CandidateDetail = {
   id: string;
   name: string;
   headline: string | null;
+  color: string;
   yearsExperience: number | null;
   email: string | null;
   phone: string | null;
@@ -183,7 +187,7 @@ export async function getCandidate(id: string): Promise<CandidateDetail | null> 
   const [candRes, appsRes, stagesRes] = await Promise.all([
     supabase
       .from("candidates")
-      .select("id, name, headline, years_experience, email, phone, links, skills, source, context, archived_at")
+      .select("id, name, headline, color, years_experience, email, phone, links, skills, source, context, archived_at")
       .eq("workspace_id", DEFAULT_WORKSPACE_ID)
       .eq("id", id)
       .maybeSingle(),
@@ -227,6 +231,7 @@ export async function getCandidate(id: string): Promise<CandidateDetail | null> 
     id: c.id,
     name: c.name,
     headline: c.headline,
+    color: c.color,
     yearsExperience: c.years_experience,
     email: c.email,
     phone: c.phone,
@@ -304,7 +309,7 @@ export async function getApplicationDetail(id: string): Promise<ApplicationDetai
     .select(
       `id, role, stage_id, candidate_id,
        company:companies ( id, name ),
-       candidate:candidates ( id, name, headline, years_experience, email, phone, links, skills, source, context ),
+       candidate:candidates ( id, name, headline, color, years_experience, email, phone, links, skills, source, context ),
        application_labels ( label:labels ( id, name, color ) )`,
     )
     .eq("workspace_id", DEFAULT_WORKSPACE_ID)
@@ -342,7 +347,7 @@ export async function getApplicationDetail(id: string): Promise<ApplicationDetai
   }
 
   const c = app.candidate as unknown as {
-    id: string; name: string; headline: string | null; years_experience: number | null;
+    id: string; name: string; headline: string | null; color: string; years_experience: number | null;
     email: string | null; phone: string | null; links: string[]; skills: string[];
     source: string | null; context: string | null;
   };
@@ -356,6 +361,7 @@ export async function getApplicationDetail(id: string): Promise<ApplicationDetai
       id: c.id,
       name: c.name,
       headline: c.headline,
+      color: c.color,
       yearsExperience: c.years_experience,
       email: c.email,
       phone: c.phone,
@@ -424,7 +430,7 @@ export type CompanyDetail = {
   processes: {
     id: string;
     role: string;
-    candidate: { id: string; name: string; archived: boolean };
+    candidate: { id: string; name: string; color: string; archived: boolean };
     stage: { name: string; color: string; isFinal: boolean; sortOrder: number };
   }[];
 };
@@ -437,7 +443,7 @@ export async function getCompany(id: string): Promise<CompanyDetail | null> {
     .select(
       `id, name, website, context,
        applications ( id, role, archived_at,
-         candidate:candidates ( id, name, archived_at ),
+         candidate:candidates ( id, name, color, archived_at ),
          stage:stages ( name, color, is_final, sort_order ) )`,
     )
     .eq("workspace_id", DEFAULT_WORKSPACE_ID)
@@ -448,7 +454,7 @@ export async function getCompany(id: string): Promise<CompanyDetail | null> {
 
   type Row = {
     id: string; role: string; archived_at: string | null;
-    candidate: { id: string; name: string; archived_at: string | null };
+    candidate: { id: string; name: string; color: string; archived_at: string | null };
     stage: { name: string; color: string; is_final: boolean; sort_order: number };
   };
   const processes = (data.applications as unknown as Row[])
@@ -456,7 +462,7 @@ export async function getCompany(id: string): Promise<CompanyDetail | null> {
     .map((a) => ({
       id: a.id,
       role: a.role,
-      candidate: { id: a.candidate.id, name: a.candidate.name, archived: a.candidate.archived_at !== null },
+      candidate: { id: a.candidate.id, name: a.candidate.name, color: a.candidate.color, archived: a.candidate.archived_at !== null },
       stage: { name: a.stage.name, color: a.stage.color, isFinal: a.stage.is_final, sortOrder: a.stage.sort_order },
     }))
     // active processes first, furthest along first

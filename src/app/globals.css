@@ -1,26 +1,107 @@
 @import "tailwindcss";
 
+/* =============================================================================
+   K8assistant design tokens
+   Light blue, frosted glass, soft gradients. Change the look here, not in
+   every component.
+   ============================================================================= */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #f3f8ff;
+  --foreground: #0f172a;
+
+  /* Brand: sky → blue */
+  --brand-from: #38bdf8;
+  --brand-to: #2563eb;
+
+  /* Page backdrop: soft blue blobs over a pale gradient */
+  --backdrop:
+    radial-gradient(60rem 40rem at 0% -10%, rgb(125 211 252 / 0.45), transparent 60%),
+    radial-gradient(50rem 35rem at 100% 0%, rgb(165 180 252 / 0.35), transparent 60%),
+    radial-gradient(45rem 35rem at 50% 110%, rgb(103 232 249 / 0.25), transparent 60%),
+    linear-gradient(180deg, #f5faff 0%, #eef4ff 100%);
+
+  /* Glass surfaces */
+  --glass-bg: rgb(255 255 255 / 0.55);
+  --glass-strong-bg: rgb(255 255 255 / 0.78);
+  --glass-border: rgb(255 255 255 / 0.75);
+  --glass-shadow: 0 8px 32px rgb(30 64 175 / 0.08), 0 1px 2px rgb(15 23 42 / 0.04);
+  --card-bg: rgb(255 255 255 / 0.72);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0b1220;
+    --foreground: #e2e8f0;
+    --backdrop:
+      radial-gradient(60rem 40rem at 0% -10%, rgb(14 165 233 / 0.22), transparent 60%),
+      radial-gradient(50rem 35rem at 100% 0%, rgb(99 102 241 / 0.2), transparent 60%),
+      linear-gradient(180deg, #0b1220 0%, #0d1830 100%);
+    --glass-bg: rgb(15 23 42 / 0.5);
+    --glass-strong-bg: rgb(15 23 42 / 0.82);
+    --glass-border: rgb(148 163 184 / 0.16);
+    --glass-shadow: 0 8px 32px rgb(0 0 0 / 0.35);
+    --card-bg: rgb(30 41 59 / 0.62);
+  }
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-brand-from: var(--brand-from);
+  --color-brand-to: var(--brand-to);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+body {
+  background: var(--backdrop);
+  background-color: var(--background);
+  background-attachment: fixed;
+  color: var(--foreground);
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+/* ---------------------------------------------------------------------------
+   Reusable surfaces (utilities, so they work with hover:/dark: and @apply)
+   --------------------------------------------------------------------------- */
+
+/* Frosted panel: columns, lists, side panel */
+@utility glass {
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow);
+  @apply backdrop-blur-xl backdrop-saturate-150;
+}
+
+/* More opaque: dialogs, header, anything text-heavy */
+@utility glass-strong {
+  background: var(--glass-strong-bg);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow);
+  @apply backdrop-blur-2xl backdrop-saturate-150;
+}
+
+@utility brand-gradient {
+  background-image: linear-gradient(135deg, var(--brand-from), var(--brand-to));
+}
+
+@utility brand-text {
+  background-image: linear-gradient(135deg, var(--brand-from), var(--brand-to));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* ---------------------------------------------------------------------------
+   Controls
+   --------------------------------------------------------------------------- */
+@layer components {
+  .btn-primary {
+    @apply brand-gradient inline-flex items-center justify-center gap-1.5 rounded-xl px-4 py-2 text-sm font-medium text-white shadow-md shadow-blue-500/25 transition hover:shadow-lg hover:shadow-blue-500/30 hover:brightness-110 disabled:opacity-50;
+  }
+  .btn-secondary {
+    @apply glass inline-flex items-center justify-center gap-1.5 rounded-xl px-3.5 py-2 text-sm font-medium text-slate-700 transition hover:bg-white/80 disabled:opacity-50 dark:text-slate-200 dark:hover:bg-slate-800/70;
+  }
+  .input-field {
+    @apply w-full rounded-xl border border-slate-200/80 bg-white/70 px-3 py-2 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-sky-400 focus:bg-white focus:ring-4 focus:ring-sky-400/15 dark:border-slate-700 dark:bg-slate-900/60 dark:text-slate-100 dark:focus:bg-slate-900;
+  }
 }

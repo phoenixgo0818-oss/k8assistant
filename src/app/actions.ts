@@ -8,7 +8,7 @@ import { refresh } from "next/cache";
 import { generateKeyBetween } from "fractional-indexing";
 import { z } from "zod";
 import { db, DEFAULT_WORKSPACE_ID } from "@/lib/supabase";
-import { LABEL_COLORS } from "@/lib/constants";
+import { ENGINEER_COLORS, LABEL_COLORS } from "@/lib/constants";
 
 export type FormState = {
   ok: boolean;
@@ -516,6 +516,25 @@ export async function deleteCompany(input: { companyId: string }): Promise<{ ok:
   if (error) {
     if (error.code === "23503") return { ok: false, message: "Remove this company's processes first." }; // foreign key
     console.error("deleteCompany failed", error);
+    return { ok: false };
+  }
+  refresh();
+  return { ok: true };
+}
+
+// ---------------------------------------------------------------------------
+// Engineer colour
+// ---------------------------------------------------------------------------
+export async function setCandidateColor(input: { candidateId: string; color: string }): Promise<{ ok: boolean }> {
+  const parsed = z.object({ candidateId: uuid, color: z.enum(ENGINEER_COLORS) }).safeParse(input);
+  if (!parsed.success) return { ok: false };
+  const { error } = await db()
+    .from("candidates")
+    .update({ color: parsed.data.color })
+    .eq("workspace_id", DEFAULT_WORKSPACE_ID)
+    .eq("id", parsed.data.candidateId);
+  if (error) {
+    console.error("setCandidateColor failed", error);
     return { ok: false };
   }
   refresh();

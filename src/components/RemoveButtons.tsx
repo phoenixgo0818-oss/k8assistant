@@ -7,7 +7,7 @@ import { deleteApplication, deleteCandidate, deleteCompany, setCandidateArchived
 import { ConfirmAction } from "./ConfirmAction";
 
 const linkDanger = "text-sm font-medium text-red-600 hover:underline dark:text-red-400";
-const linkNeutral = "text-sm font-medium text-zinc-600 hover:underline dark:text-zinc-400";
+const linkNeutral = "text-sm font-medium text-slate-600 hover:underline dark:text-slate-400";
 
 export function ArchiveCandidateButton({ candidateId, name, redirectTo }: { candidateId: string; name: string; redirectTo?: string }) {
   return (
@@ -33,7 +33,7 @@ export function RestoreCandidateButton({ candidateId, name }: { candidateId: str
   return (
     <ConfirmAction
       label="Restore"
-      buttonClassName="rounded-lg border border-zinc-300 bg-white px-3 py-1.5 text-sm font-medium hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900"
+      buttonClassName="btn-secondary"
       tone="neutral"
       title={`Restore ${name}?`}
       message={<p>{name} and all their processes come back on the board where they were.</p>}
@@ -55,7 +55,7 @@ export function DeleteCandidateButton({ candidateId, name, processes }: { candid
             This deletes {name}&apos;s profile{processes > 0 && <> and <strong>{processes} process{processes === 1 ? "" : "es"}</strong></>}, with
             all notes and history. <strong>This can&apos;t be undone.</strong>
           </p>
-          <p className="mt-2 text-zinc-500">Just want them off the board? Use Archive instead.</p>
+          <p className="mt-2 text-slate-500">Just want them off the board? Use Archive instead.</p>
         </>
       }
       confirmLabel="Delete permanently"

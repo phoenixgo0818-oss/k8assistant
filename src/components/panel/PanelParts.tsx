@@ -36,14 +36,14 @@ export function PanelShell({ title, children }: { title: string; children: React
   return (
     <aside
       aria-label={title}
-      className="fixed inset-y-0 right-0 z-20 flex w-full flex-col border-l border-zinc-200 bg-white shadow-2xl sm:top-14 sm:w-[30rem] dark:border-zinc-800 dark:bg-zinc-950"
+      className="glass-strong fixed inset-y-0 right-0 z-20 flex w-full flex-col rounded-none border-y-0 border-r-0 shadow-2xl shadow-blue-900/10 sm:top-14 sm:w-[30rem]"
     >
-      <div className="flex items-center justify-end border-b border-zinc-200 px-3 py-2 dark:border-zinc-800">
+      <div className="flex items-center justify-end border-b border-white/60 px-3 py-2 dark:border-slate-700/60">
         <Link
           href="/"
           scroll={false}
           aria-label="Close panel"
-          className="rounded-md px-2 py-1 text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+          className="rounded-md px-2 py-1 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800"
         >
           ✕
         </Link>
@@ -83,7 +83,7 @@ export function StagePicker({ detail }: { detail: ApplicationDetail }) {
 
   return (
     <label className="block text-sm">
-      <span className="font-medium text-zinc-700 dark:text-zinc-300">Stage</span>
+      <span className="font-medium text-slate-700 dark:text-slate-300">Stage</span>
       <select
         key={detail.stageId} // re-sync if the card is moved elsewhere (e.g. dragged)
         defaultValue={detail.stageId}
@@ -130,7 +130,7 @@ export function LabelPicker({ detail }: { detail: ApplicationDetail }) {
 
   return (
     <section>
-      <h3 className="text-sm font-medium text-zinc-700 dark:text-zinc-300">Labels</h3>
+      <h3 className="text-sm font-medium text-slate-700 dark:text-slate-300">Labels</h3>
       <div className="mt-2 flex flex-wrap gap-1.5" aria-busy={pending}>
         {detail.allLabels.map((l) => {
           const on = isOn(l);
@@ -155,7 +155,7 @@ export function LabelPicker({ detail }: { detail: ApplicationDetail }) {
         <button
           type="button"
           onClick={() => setCreating((c) => !c)}
-          className="rounded-full border border-dashed border-zinc-300 px-2 py-0.5 text-[11px] text-zinc-500 hover:border-zinc-400 dark:border-zinc-700"
+          className="rounded-full border border-dashed border-slate-300 px-2 py-0.5 text-[11px] text-slate-500 hover:border-slate-400 dark:border-slate-700"
         >
           + New label
         </button>
@@ -170,7 +170,7 @@ export function LabelPicker({ detail }: { detail: ApplicationDetail }) {
               <label key={c} className="cursor-pointer">
                 <input type="radio" name="color" value={c} defaultChecked={i === 3} className="peer sr-only" />
                 <span
-                  className="block size-5 rounded-full ring-offset-2 peer-checked:ring-2 peer-checked:ring-zinc-900 dark:ring-offset-zinc-950 dark:peer-checked:ring-zinc-100"
+                  className="block size-5 rounded-full ring-offset-2 peer-checked:ring-2 peer-checked:ring-slate-900 dark:ring-offset-slate-950 dark:peer-checked:ring-slate-100"
                   style={{ backgroundColor: c }}
                 />
               </label>
@@ -211,7 +211,7 @@ export function NoteForm({ applicationId }: { applicationId: string }) {
         }}
       />
       <div className="flex items-center justify-between">
-        <span className="text-xs text-zinc-500">Ctrl + Enter to add</span>
+        <span className="text-xs text-slate-500">Ctrl + Enter to add</span>
         <button type="submit" disabled={pending} className={primaryButtonClass}>
           {pending ? "Adding…" : "Add note"}
         </button>
@@ -300,7 +300,7 @@ export function NoteItem({ note }: { note: Note }) {
   }, [state]);
 
   const meta = (
-    <p className="text-xs text-zinc-500">
+    <p className="text-xs text-slate-500">
       <LocalTime iso={note.createdAt} />
       {note.stageName && <> · during <span className="font-medium">{note.stageName}</span></>}
     </p>
@@ -308,7 +308,7 @@ export function NoteItem({ note }: { note: Note }) {
 
   if (editing) {
     return (
-      <li className="rounded-lg bg-zinc-50 p-3 text-sm dark:bg-zinc-900">
+      <li className="rounded-xl border border-white/80 bg-white/60 p-3 text-sm dark:border-slate-700/60 dark:bg-slate-800/50">
         <form onSubmit={onSubmit} className="space-y-2">
           <input type="hidden" name="noteId" value={note.id} />
           <textarea
@@ -344,13 +344,13 @@ export function NoteItem({ note }: { note: Note }) {
   }
 
   return (
-    <li className="group rounded-lg bg-zinc-50 p-3 text-sm dark:bg-zinc-900">
-      <p className="whitespace-pre-line text-zinc-900 dark:text-zinc-100">{note.body}</p>
+    <li className="group rounded-xl border border-white/80 bg-white/60 p-3 text-sm dark:border-slate-700/60 dark:bg-slate-800/50">
+      <p className="whitespace-pre-line text-slate-900 dark:text-slate-100">{note.body}</p>
       <div className="mt-1.5 flex items-center justify-between gap-2">
         {meta}
         {confirmDelete ? (
           <span className="flex items-center gap-2 text-xs">
-            <span className="text-zinc-600 dark:text-zinc-400">Delete this note?</span>
+            <span className="text-slate-600 dark:text-slate-400">Delete this note?</span>
             <button
               type="button"
               disabled={deleting}
@@ -364,16 +364,16 @@ export function NoteItem({ note }: { note: Note }) {
             >
               {deleting ? "Deleting…" : "Yes, delete"}
             </button>
-            <button type="button" className="text-zinc-500 hover:underline" onClick={() => setConfirmDelete(false)}>
+            <button type="button" className="text-slate-500 hover:underline" onClick={() => setConfirmDelete(false)}>
               No
             </button>
           </span>
         ) : (
           <span className="flex gap-3 text-xs">
-            <button type="button" className="text-zinc-500 hover:text-zinc-900 hover:underline dark:hover:text-zinc-100" onClick={() => setEditing(true)}>
+            <button type="button" className="text-slate-500 hover:text-slate-900 hover:underline dark:hover:text-slate-100" onClick={() => setEditing(true)}>
               Edit
             </button>
-            <button type="button" className="text-zinc-500 hover:text-red-600 hover:underline" onClick={() => setConfirmDelete(true)}>
+            <button type="button" className="text-slate-500 hover:text-red-600 hover:underline" onClick={() => setConfirmDelete(true)}>
               Delete
             </button>
           </span>

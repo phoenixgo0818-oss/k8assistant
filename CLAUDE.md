@@ -30,6 +30,10 @@ doing it. I am new to coding.
 - Writes go through Server Actions (`src/app/actions.ts`, zod-validated) that
   call Postgres functions (RPC) so each change + its activity row is one transaction.
 - Production: https://k8assistant.vercel.app
+- Design system: tokens + `glass`, `glass-strong`, `brand-gradient`, `brand-text`
+  utilities and `.btn-primary` / `.btn-secondary` / `.input-field` live in
+  `src/app/globals.css`; use them instead of one-off colours. Slate + sky palette.
+  Each engineer has a `color` (palette in `src/lib/constants.ts` and the DB).
 - Supabase project ref: iyusfcsxadcrnxwqrgxb (dev DB, fake data).
 - Data access is server-only (`src/lib/supabase.ts`, secret key, `server-only`).
   `cacheComponents` is on: request-time reads call `await connection()` and sit
