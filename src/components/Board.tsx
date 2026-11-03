@@ -196,7 +196,10 @@ export function Board({ columns: serverColumns, selectedId }: { columns: Columns
         onDragEnd={onDragEnd}
         onDragCancel={resetDrag}
       >
-        <div className="flex flex-1 gap-3 overflow-x-auto px-4 pb-6 sm:px-6">
+        {/* `relative` matters: absolutely positioned children (e.g. screen-reader
+            text) are only clipped by a scroll container that is positioned.
+            Without it they escaped and stretched the whole page sideways. */}
+        <div className="relative flex flex-1 gap-3 overflow-x-auto px-4 pb-6 sm:px-6">
           {columns.map((column) => (
             <Column
               key={column.id}

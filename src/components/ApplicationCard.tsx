@@ -13,7 +13,7 @@ export function ApplicationCard({ card, selected = false }: { card: Card; select
       href={`/?card=${card.id}`}
       scroll={false}
       aria-current={selected ? "true" : undefined}
-      className={`block rounded-lg border bg-white p-3 shadow-sm transition hover:shadow focus-visible:outline-2 focus-visible:outline-indigo-500 dark:bg-zinc-900 ${
+      className={`relative block rounded-lg border bg-white p-3 shadow-sm transition hover:shadow focus-visible:outline-2 focus-visible:outline-indigo-500 dark:bg-zinc-900 ${
         selected
           ? "border-indigo-500 ring-2 ring-indigo-500/30"
           : "border-zinc-200 hover:border-zinc-300 dark:border-zinc-800 dark:hover:border-zinc-700"
