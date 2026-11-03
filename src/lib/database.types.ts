@@ -461,6 +461,10 @@ export type Database = {
         Args: { p_color: string; p_name: string; p_workspace_id: string }
         Returns: string
       }
+      delete_application: {
+        Args: { p_application_id: string; p_workspace_id: string }
+        Returns: undefined
+      }
       find_or_create_company: {
         Args: { p_name: string; p_workspace_id: string }
         Returns: string
@@ -479,6 +483,14 @@ export type Database = {
           p_application_id: string
           p_label_id: string
           p_on: boolean
+          p_workspace_id: string
+        }
+        Returns: undefined
+      }
+      set_candidate_archived: {
+        Args: {
+          p_archived: boolean
+          p_candidate_id: string
           p_workspace_id: string
         }
         Returns: undefined

@@ -26,6 +26,7 @@ export type ApplicationCard = {
   candidate: { id: string; name: string; headline: string | null };
   company: { id: string; name: string };
   labels: Label[];
+  noteCount: number;
 };
 
 export type BoardColumn = Stage & { cards: ApplicationCard[] };
@@ -36,7 +37,8 @@ const APPLICATION_SELECT = `
   id, role, rank, stage_id,
   candidate:candidates!inner ( id, name, headline, archived_at ),
   company:companies ( id, name ),
-  application_labels ( label:labels ( id, name, color ) )
+  application_labels ( label:labels ( id, name, color ) ),
+  application_notes ( count )
 ` as const;
 
 type ApplicationRow = {
@@ -47,6 +49,7 @@ type ApplicationRow = {
   candidate: { id: string; name: string; headline: string | null };
   company: { id: string; name: string };
   application_labels: { label: Label }[];
+  application_notes: { count: number }[];
 };
 
 function toCard(row: ApplicationRow): ApplicationCard {
@@ -64,6 +67,7 @@ function toCard(row: ApplicationRow): ApplicationCard {
     labels: row.application_labels
       .map((al) => al.label)
       .sort((a, b) => a.name.localeCompare(b.name)),
+    noteCount: row.application_notes[0]?.count ?? 0,
   };
 }
 
@@ -138,6 +142,18 @@ export async function getCandidates(): Promise<CandidateSummary[]> {
   }));
 }
 
+export async function getArchivedCandidates(): Promise<{ id: string; name: string; archivedAt: string }[]> {
+  await connection();
+  const { data, error } = await db()
+    .from("candidates")
+    .select("id, name, archived_at")
+    .eq("workspace_id", DEFAULT_WORKSPACE_ID)
+    .not("archived_at", "is", null)
+    .order("archived_at", { ascending: false });
+  if (error) throw new Error(`Loading archived candidates failed: ${error.message}`);
+  return data.map((c) => ({ id: c.id, name: c.name, archivedAt: c.archived_at! }));
+}
+
 // ---------------------------------------------------------------------------
 // One candidate: profile + every process they're in
 // ---------------------------------------------------------------------------
@@ -152,6 +168,7 @@ export type CandidateDetail = {
   skills: string[];
   source: string | null;
   context: string | null;
+  archivedAt: string | null;
   applications: (ApplicationCard & { stage: Stage })[];
 };
 
@@ -166,7 +183,7 @@ export async function getCandidate(id: string): Promise<CandidateDetail | null> 
   const [candRes, appsRes, stagesRes] = await Promise.all([
     supabase
       .from("candidates")
-      .select("id, name, headline, years_experience, email, phone, links, skills, source, context")
+      .select("id, name, headline, years_experience, email, phone, links, skills, source, context, archived_at")
       .eq("workspace_id", DEFAULT_WORKSPACE_ID)
       .eq("id", id)
       .maybeSingle(),
@@ -217,6 +234,7 @@ export async function getCandidate(id: string): Promise<CandidateDetail | null> 
     skills: c.skills,
     source: c.source,
     context: c.context,
+    archivedAt: c.archived_at,
     applications,
   };
 }
@@ -268,7 +286,7 @@ export type ApplicationDetail = {
   role: string;
   stageId: string;
   company: { id: string; name: string };
-  candidate: Omit<CandidateDetail, "applications"> & { otherProcesses: number };
+  candidate: Omit<CandidateDetail, "applications" | "archivedAt"> & { otherProcesses: number };
   labels: Label[];
   allLabels: Label[];
   stages: { id: string; name: string; color: string }[];
@@ -363,4 +381,86 @@ export async function getApplicationDetail(id: string): Promise<ApplicationDetai
       profileLevel: a.application_id === null,
     })),
   };
+}
+
+// ---------------------------------------------------------------------------
+// Companies
+// ---------------------------------------------------------------------------
+export type CompanySummary = {
+  id: string;
+  name: string;
+  website: string | null;
+  processes: number;
+  engineers: number;
+};
+
+export async function getCompanies(): Promise<CompanySummary[]> {
+  await connection();
+  const { data, error } = await db()
+    .from("companies")
+    .select("id, name, website, applications ( candidate_id, archived_at, candidate:candidates ( archived_at ) )")
+    .eq("workspace_id", DEFAULT_WORKSPACE_ID)
+    .order("name");
+  if (error) throw new Error(`Loading companies failed: ${error.message}`);
+
+  return data.map((c) => {
+    const active = (c.applications as unknown as { candidate_id: string; archived_at: string | null; candidate: { archived_at: string | null } }[])
+      .filter((a) => a.archived_at === null && a.candidate.archived_at === null);
+    return {
+      id: c.id,
+      name: c.name,
+      website: c.website,
+      processes: active.length,
+      engineers: new Set(active.map((a) => a.candidate_id)).size,
+    };
+  });
+}
+
+export type CompanyDetail = {
+  id: string;
+  name: string;
+  website: string | null;
+  context: string | null;
+  processes: {
+    id: string;
+    role: string;
+    candidate: { id: string; name: string; archived: boolean };
+    stage: { name: string; color: string; isFinal: boolean; sortOrder: number };
+  }[];
+};
+
+export async function getCompany(id: string): Promise<CompanyDetail | null> {
+  await connection();
+  if (!UUID_RE.test(id)) return null;
+  const { data, error } = await db()
+    .from("companies")
+    .select(
+      `id, name, website, context,
+       applications ( id, role, archived_at,
+         candidate:candidates ( id, name, archived_at ),
+         stage:stages ( name, color, is_final, sort_order ) )`,
+    )
+    .eq("workspace_id", DEFAULT_WORKSPACE_ID)
+    .eq("id", id)
+    .maybeSingle();
+  if (error) throw new Error(`Loading company failed: ${error.message}`);
+  if (!data) return null;
+
+  type Row = {
+    id: string; role: string; archived_at: string | null;
+    candidate: { id: string; name: string; archived_at: string | null };
+    stage: { name: string; color: string; is_final: boolean; sort_order: number };
+  };
+  const processes = (data.applications as unknown as Row[])
+    .filter((a) => a.archived_at === null)
+    .map((a) => ({
+      id: a.id,
+      role: a.role,
+      candidate: { id: a.candidate.id, name: a.candidate.name, archived: a.candidate.archived_at !== null },
+      stage: { name: a.stage.name, color: a.stage.color, isFinal: a.stage.is_final, sortOrder: a.stage.sort_order },
+    }))
+    // active processes first, furthest along first
+    .sort((a, b) => Number(a.stage.isFinal) - Number(b.stage.isFinal) || b.stage.sortOrder - a.stage.sortOrder);
+
+  return { id: data.id, name: data.name, website: data.website, context: data.context, processes };
 }

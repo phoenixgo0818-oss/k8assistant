@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { getCandidate, getFormOptions } from "@/lib/queries";
 import { NewApplicationButton } from "@/components/CreateButtons";
 import { LabelChip, StageDot } from "@/components/LabelChip";
+import { ArchiveCandidateButton, DeleteCandidateButton, RestoreCandidateButton } from "@/components/RemoveButtons";
 
 export async function generateMetadata(props: PageProps<"/candidates/[id]">): Promise<Metadata> {
   const { id } = await props.params;
@@ -29,6 +30,15 @@ export default async function CandidatePage(props: PageProps<"/candidates/[id]">
         ← Board
       </Link>
 
+      {candidate.archivedAt && (
+        <div className="mt-3 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-200">
+          <span>
+            <strong>Archived.</strong> {candidate.name}&apos;s processes are hidden from the board.
+          </span>
+          <RestoreCandidateButton candidateId={candidate.id} name={candidate.name} />
+        </div>
+      )}
+
       <h1 className="mt-3 text-2xl font-semibold text-zinc-900 dark:text-zinc-50">{candidate.name}</h1>
       {candidate.headline && <p className="text-zinc-600 dark:text-zinc-400">{candidate.headline}</p>}
 
@@ -52,7 +62,9 @@ export default async function CandidatePage(props: PageProps<"/candidates/[id]">
             <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-500">
               Processes ({candidate.applications.length})
             </h2>
-            <NewApplicationButton options={options} candidateId={candidate.id} label="+ Add process" />
+            {!candidate.archivedAt && (
+              <NewApplicationButton options={options} candidateId={candidate.id} label="+ Add process" />
+            )}
           </div>
           <ul className="mt-2 space-y-2">
             {candidate.applications.map((app) => (
@@ -122,6 +134,12 @@ export default async function CandidatePage(props: PageProps<"/candidates/[id]">
           )}
         </aside>
       </div>
+
+      {/* Removing the engineer */}
+      <section className="mt-10 flex flex-wrap items-center gap-6 border-t border-zinc-200 pt-4 dark:border-zinc-800">
+        {!candidate.archivedAt && <ArchiveCandidateButton candidateId={candidate.id} name={candidate.name} />}
+        <DeleteCandidateButton candidateId={candidate.id} name={candidate.name} processes={candidate.applications.length} />
+      </section>
     </main>
   );
 }

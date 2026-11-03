@@ -25,11 +25,23 @@ export function ApplicationCard({ card, selected = false }: { card: Card; select
         {" · "}
         {card.role}
       </p>
-      {card.labels.length > 0 && (
-        <div className="mt-2 flex flex-wrap gap-1">
+      {(card.labels.length > 0 || card.noteCount > 0) && (
+        <div className="mt-2 flex flex-wrap items-center gap-1">
           {card.labels.map((l) => (
             <LabelChip key={l.id} label={l} />
           ))}
+          {card.noteCount > 0 && (
+            <span
+              className="ml-auto inline-flex items-center gap-1 text-[11px] text-zinc-500"
+              title={`${card.noteCount} note${card.noteCount === 1 ? "" : "s"}`}
+            >
+              <svg viewBox="0 0 16 16" className="size-3.5" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden>
+                <path d="M2.5 3.5h11v7h-6l-3 2.5v-2.5h-2z" strokeLinejoin="round" />
+              </svg>
+              {card.noteCount}
+              <span className="sr-only">notes</span>
+            </span>
+          )}
         </div>
       )}
     </Link>
