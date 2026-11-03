@@ -8,6 +8,7 @@ import { refresh } from "next/cache";
 import { generateKeyBetween } from "fractional-indexing";
 import { z } from "zod";
 import { db, DEFAULT_WORKSPACE_ID } from "@/lib/supabase";
+import { LABEL_COLORS } from "@/lib/constants";
 
 export type FormState = {
   ok: boolean;
@@ -208,4 +209,151 @@ export async function moveApplication(input: z.input<typeof moveSchema>): Promis
 
   refresh();
   return { ok: true };
+}
+
+// ---------------------------------------------------------------------------
+// Detail panel (Step 2.4)
+// ---------------------------------------------------------------------------
+
+/** Stage dropdown: same as dragging the card to the bottom of that column */
+export async function changeStage(input: { applicationId: string; stageId: string }): Promise<{ ok: boolean }> {
+  const parsed = z.object({ applicationId: uuid, stageId: uuid }).safeParse(input);
+  if (!parsed.success) return { ok: false };
+
+  try {
+    const { error } = await db().rpc("move_application", {
+      p_workspace_id: DEFAULT_WORKSPACE_ID,
+      p_application_id: parsed.data.applicationId,
+      p_stage_id: parsed.data.stageId,
+      p_rank: await rankAtEnd(parsed.data.stageId),
+    });
+    if (error) throw new Error(error.message);
+  } catch (e) {
+    console.error("changeStage failed", e);
+    return { ok: false };
+  }
+  refresh();
+  return { ok: true };
+}
+
+export async function setLabel(input: { applicationId: string; labelId: string; on: boolean }): Promise<{ ok: boolean }> {
+  const parsed = z.object({ applicationId: uuid, labelId: uuid, on: z.boolean() }).safeParse(input);
+  if (!parsed.success) return { ok: false };
+
+  const { error } = await db().rpc("set_application_label", {
+    p_workspace_id: DEFAULT_WORKSPACE_ID,
+    p_application_id: parsed.data.applicationId,
+    p_label_id: parsed.data.labelId,
+    p_on: parsed.data.on,
+  });
+  if (error) {
+    console.error("setLabel failed", error);
+    return { ok: false };
+  }
+  refresh();
+  return { ok: true };
+}
+
+/** Create a new label (or reuse one with the same name) and put it on this card */
+export async function createLabelOnCard(_prev: FormState, formData: FormData): Promise<FormState> {
+  const parsed = z
+    .object({
+      applicationId: uuid,
+      name: z.string().trim().min(1, "Name is required").max(40),
+      color: z.enum(LABEL_COLORS).catch("#64748b"),
+    })
+    .safeParse(formValues(formData));
+  if (!parsed.success) return invalid(parsed.error);
+
+  try {
+    const { data: labelId, error } = await db().rpc("create_label", {
+      p_workspace_id: DEFAULT_WORKSPACE_ID,
+      p_name: parsed.data.name,
+      p_color: parsed.data.color,
+    });
+    if (error) throw new Error(error.message);
+    const { error: e2 } = await db().rpc("set_application_label", {
+      p_workspace_id: DEFAULT_WORKSPACE_ID,
+      p_application_id: parsed.data.applicationId,
+      p_label_id: labelId,
+      p_on: true,
+    });
+    if (e2) throw new Error(e2.message);
+  } catch (e) {
+    console.error("createLabelOnCard failed", e);
+    return { ok: false, message: "Couldn't create the label." };
+  }
+  refresh();
+  return { ok: true, submittedAt: Date.now() };
+}
+
+export async function addNote(_prev: FormState, formData: FormData): Promise<FormState> {
+  const parsed = z
+    .object({ applicationId: uuid, body: z.string().trim().min(1, "Write something first").max(5000) })
+    .safeParse(formValues(formData));
+  if (!parsed.success) return invalid(parsed.error);
+
+  const { error } = await db().rpc("add_application_note", {
+    p_workspace_id: DEFAULT_WORKSPACE_ID,
+    p_application_id: parsed.data.applicationId,
+    p_body: parsed.data.body,
+  });
+  if (error) {
+    console.error("addNote failed", error);
+    return { ok: false, message: "Couldn't save the note." };
+  }
+  refresh();
+  return { ok: true, submittedAt: Date.now() };
+}
+
+const listOf = (separator: RegExp, max: number) =>
+  z
+    .string()
+    .optional()
+    .transform((v) => [...new Set((v ?? "").split(separator).map((s) => s.trim()).filter(Boolean))].slice(0, max));
+
+const profileSchema = z.object({
+  candidateId: uuid,
+  name: z.string().trim().min(1, "Name is required").max(120),
+  headline: z.string().trim().max(120).optional(),
+  yearsExperience: z
+    .string()
+    .trim()
+    .optional()
+    .transform((v) => (v ? Number(v) : null))
+    .pipe(z.number().int("Whole years").min(0).max(60).nullable()),
+  email: z
+    .union([z.literal(""), z.email("Not a valid email")])
+    .optional(),
+  phone: z.string().trim().max(40).optional(),
+  skills: listOf(/,/, 30),
+  links: listOf(/\s+/, 10).pipe(z.array(z.url({ protocol: /^https?$/, error: "Links must start with http:// or https://" }))),
+  source: z.string().trim().max(80).optional(),
+  context: z.string().trim().max(5000).optional(),
+});
+
+export async function updateProfile(_prev: FormState, formData: FormData): Promise<FormState> {
+  const parsed = profileSchema.safeParse(formValues(formData));
+  if (!parsed.success) return invalid(parsed.error);
+  const v = parsed.data;
+
+  const { error } = await db().rpc("update_candidate", {
+    p_workspace_id: DEFAULT_WORKSPACE_ID,
+    p_candidate_id: v.candidateId,
+    p_name: v.name,
+    p_headline: v.headline ?? "",
+    p_years_experience: v.yearsExperience as number, // null clears it
+    p_email: v.email ?? "",
+    p_phone: v.phone ?? "",
+    p_links: v.links,
+    p_skills: v.skills,
+    p_source: v.source ?? "",
+    p_context: v.context ?? "",
+  });
+  if (error) {
+    console.error("updateProfile failed", error);
+    return { ok: false, message: "Couldn't save the profile." };
+  }
+  refresh();
+  return { ok: true, message: "Saved", submittedAt: Date.now() };
 }

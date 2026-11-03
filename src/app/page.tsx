@@ -1,11 +1,20 @@
-import { getBoard, getFormOptions } from "@/lib/queries";
+import { getApplicationDetail, getBoard, getFormOptions } from "@/lib/queries";
 import { Board } from "@/components/Board";
 import { NewApplicationButton, NewCandidateButton } from "@/components/CreateButtons";
+import { DetailPanel } from "@/components/panel/DetailPanel";
 
-export default async function BoardPage() {
-  // Server Component: fetch on the server, hand plain data to the
-  // interactive (client) Board.
-  const [columns, options] = await Promise.all([getBoard(), getFormOptions()]);
+export default async function BoardPage(props: PageProps<"/">) {
+  // ?card=<id> in the URL = which card's detail panel is open
+  const { card } = await props.searchParams;
+  const cardId = typeof card === "string" ? card : undefined;
+
+  // Server Component: fetch on the server (in parallel), hand plain data to
+  // the interactive (client) Board and panel.
+  const [columns, options, detail] = await Promise.all([
+    getBoard(),
+    getFormOptions(),
+    cardId ? getApplicationDetail(cardId) : Promise.resolve(null),
+  ]);
   const total = columns.reduce((n, c) => n + c.cards.length, 0);
 
   return (
@@ -19,7 +28,10 @@ export default async function BoardPage() {
         </div>
       </div>
 
-      <Board columns={columns} />
+      <Board columns={columns} selectedId={detail?.id} />
+
+      {/* An unknown or stale ?card= id simply shows no panel */}
+      {detail && <DetailPanel detail={detail} />}
     </main>
   );
 }

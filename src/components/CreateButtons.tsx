@@ -3,6 +3,7 @@
 import { useActionState, useEffect, useId, useRef, useState } from "react";
 import { createApplication, createCandidate, type FormState } from "@/app/actions";
 import type { FormOptions } from "@/lib/queries";
+import { useSubmitKeepingValues } from "./useSubmitKeepingValues";
 import { Field, Modal, inputClass, primaryButtonClass, secondaryButtonClass } from "./Modal";
 
 const initial: FormState = { ok: false };
@@ -55,6 +56,7 @@ function StageSelect({ stages }: { stages: FormOptions["stages"] }) {
 export function NewCandidateButton({ options }: { options: FormOptions }) {
   const [open, setOpen] = useState(false);
   const [state, action, pending] = useActionState(createCandidate, initial);
+  const onSubmit = useSubmitKeepingValues(action);
   const formRef = useCloseOnSuccess(state, () => setOpen(false));
   const e = state.fieldErrors ?? {};
 
@@ -64,7 +66,7 @@ export function NewCandidateButton({ options }: { options: FormOptions }) {
         + New candidate
       </button>
       <Modal open={open} onClose={() => setOpen(false)} title="New candidate">
-        <form ref={formRef} action={action} className="space-y-3">
+        <form ref={formRef} onSubmit={onSubmit} className="space-y-3">
           <Field label="Name *" error={e.name}>
             <input name="name" required autoFocus className={inputClass} placeholder="Alex Kim" />
           </Field>
@@ -125,6 +127,7 @@ export function NewApplicationButton({
 }) {
   const [open, setOpen] = useState(false);
   const [state, action, pending] = useActionState(createApplication, initial);
+  const onSubmit = useSubmitKeepingValues(action);
   const formRef = useCloseOnSuccess(state, () => setOpen(false));
   const e = state.fieldErrors ?? {};
 
@@ -134,7 +137,7 @@ export function NewApplicationButton({
         {label}
       </button>
       <Modal open={open} onClose={() => setOpen(false)} title="New application">
-        <form ref={formRef} action={action} className="space-y-3">
+        <form ref={formRef} onSubmit={onSubmit} className="space-y-3">
           {candidateId ? (
             <input type="hidden" name="candidateId" value={candidateId} />
           ) : (

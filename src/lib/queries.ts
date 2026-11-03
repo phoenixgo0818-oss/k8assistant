@@ -246,3 +246,121 @@ export async function getFormOptions(): Promise<FormOptions> {
     stages: stages.data!,
   };
 }
+
+// ---------------------------------------------------------------------------
+// Detail panel: one application with everything the side panel shows
+// ---------------------------------------------------------------------------
+export type Note = { id: string; body: string; createdAt: string; stageName: string | null };
+
+export type Activity = {
+  id: string;
+  type: string;
+  field: string | null;
+  fromValue: string | null;
+  toValue: string | null;
+  createdAt: string;
+  /** true = about the engineer's profile, shared by all their processes */
+  profileLevel: boolean;
+};
+
+export type ApplicationDetail = {
+  id: string;
+  role: string;
+  stageId: string;
+  company: { id: string; name: string };
+  candidate: Omit<CandidateDetail, "applications"> & { otherProcesses: number };
+  labels: Label[];
+  allLabels: Label[];
+  stages: { id: string; name: string; color: string }[];
+  notes: Note[];
+  activities: Activity[];
+};
+
+export async function getApplicationDetail(id: string): Promise<ApplicationDetail | null> {
+  await connection();
+  if (!UUID_RE.test(id)) return null;
+
+  const supabase = db();
+  const { data: app, error } = await supabase
+    .from("applications")
+    .select(
+      `id, role, stage_id, candidate_id,
+       company:companies ( id, name ),
+       candidate:candidates ( id, name, headline, years_experience, email, phone, links, skills, source, context ),
+       application_labels ( label:labels ( id, name, color ) )`,
+    )
+    .eq("workspace_id", DEFAULT_WORKSPACE_ID)
+    .eq("id", id)
+    .is("archived_at", null)
+    .maybeSingle();
+  if (error) throw new Error(`Loading application failed: ${error.message}`);
+  if (!app) return null;
+
+  const [labelsRes, stagesRes, notesRes, actsRes, siblingsRes] = await Promise.all([
+    supabase.from("labels").select("id, name, color").eq("workspace_id", DEFAULT_WORKSPACE_ID).order("name"),
+    supabase.from("stages").select("id, name, color").eq("workspace_id", DEFAULT_WORKSPACE_ID).order("sort_order"),
+    supabase
+      .from("application_notes")
+      .select("id, body, created_at, stage:stages ( name )")
+      .eq("application_id", id)
+      .order("created_at", { ascending: false }),
+    // This card's events + the engineer's profile events (application_id is null)
+    supabase
+      .from("activities")
+      .select("id, type, field, from_value, to_value, created_at, application_id")
+      .eq("candidate_id", app.candidate_id)
+      .or(`application_id.eq.${id},application_id.is.null`)
+      .order("created_at", { ascending: false })
+      .limit(100),
+    supabase
+      .from("applications")
+      .select("id", { count: "exact", head: true })
+      .eq("candidate_id", app.candidate_id)
+      .is("archived_at", null)
+      .neq("id", id),
+  ]);
+  for (const r of [labelsRes, stagesRes, notesRes, actsRes, siblingsRes]) {
+    if (r.error) throw new Error(`Loading card details failed: ${r.error.message}`);
+  }
+
+  const c = app.candidate as unknown as {
+    id: string; name: string; headline: string | null; years_experience: number | null;
+    email: string | null; phone: string | null; links: string[]; skills: string[];
+    source: string | null; context: string | null;
+  };
+
+  return {
+    id: app.id,
+    role: app.role,
+    stageId: app.stage_id,
+    company: app.company as unknown as { id: string; name: string },
+    candidate: {
+      id: c.id,
+      name: c.name,
+      headline: c.headline,
+      yearsExperience: c.years_experience,
+      email: c.email,
+      phone: c.phone,
+      links: c.links,
+      skills: c.skills,
+      source: c.source,
+      context: c.context,
+      otherProcesses: siblingsRes.count ?? 0,
+    },
+    labels: (app.application_labels as unknown as { label: Label }[]).map((al) => al.label),
+    allLabels: labelsRes.data!,
+    stages: stagesRes.data!,
+    notes: (notesRes.data as unknown as { id: string; body: string; created_at: string; stage: { name: string } | null }[]).map(
+      (n) => ({ id: n.id, body: n.body, createdAt: n.created_at, stageName: n.stage?.name ?? null }),
+    ),
+    activities: actsRes.data!.map((a) => ({
+      id: a.id,
+      type: a.type,
+      field: a.field,
+      fromValue: a.from_value,
+      toValue: a.to_value,
+      createdAt: a.created_at,
+      profileLevel: a.application_id === null,
+    })),
+  };
+}

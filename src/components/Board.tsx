@@ -34,7 +34,7 @@ function findColumnIndex(columns: Columns, id: string) {
   return columns.findIndex((c) => c.id === id || c.cards.some((card) => card.id === id));
 }
 
-export function Board({ columns: serverColumns }: { columns: Columns }) {
+export function Board({ columns: serverColumns, selectedId }: { columns: Columns; selectedId?: string }) {
   // Local copy so cards move instantly while the server saves (optimistic UI).
   // When the server sends fresh data (after refresh()), adopt it.
   const [columns, setColumns] = useState(serverColumns);
@@ -142,7 +142,7 @@ export function Board({ columns: serverColumns }: { columns: Columns }) {
       >
         <div className="flex flex-1 gap-3 overflow-x-auto px-4 pb-6 sm:px-6">
           {columns.map((column) => (
-            <Column key={column.id} column={column} lastDragEnd={lastDragEnd} />
+            <Column key={column.id} column={column} lastDragEnd={lastDragEnd} selectedId={selectedId} />
           ))}
         </div>
         <DragOverlay>
@@ -160,9 +160,11 @@ export function Board({ columns: serverColumns }: { columns: Columns }) {
 function Column({
   column,
   lastDragEnd,
+  selectedId,
 }: {
   column: BoardColumn;
   lastDragEnd: React.RefObject<number>;
+  selectedId?: string;
 }) {
   // The column itself is a drop target, so empty columns accept cards too
   const { setNodeRef, isOver } = useDroppable({ id: column.id });
@@ -185,7 +187,7 @@ function Column({
       <SortableContext id={column.id} items={column.cards.map((c) => c.id)} strategy={verticalListSortingStrategy}>
         <div ref={setNodeRef} className="flex min-h-24 flex-1 flex-col gap-2 p-1">
           {column.cards.map((card) => (
-            <SortableCard key={card.id} card={card} lastDragEnd={lastDragEnd} />
+            <SortableCard key={card.id} card={card} lastDragEnd={lastDragEnd} selected={card.id === selectedId} />
           ))}
           {column.cards.length === 0 && (
             <p className="rounded-lg border border-dashed border-zinc-300 p-3 text-center text-xs text-zinc-500 dark:border-zinc-700">
@@ -198,7 +200,15 @@ function Column({
   );
 }
 
-function SortableCard({ card, lastDragEnd }: { card: Card; lastDragEnd: React.RefObject<number> }) {
+function SortableCard({
+  card,
+  lastDragEnd,
+  selected,
+}: {
+  card: Card;
+  lastDragEnd: React.RefObject<number>;
+  selected: boolean;
+}) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: card.id });
 
   return (
@@ -213,7 +223,7 @@ function SortableCard({ card, lastDragEnd }: { card: Card; lastDragEnd: React.Re
         if (Date.now() - lastDragEnd.current < 250) e.preventDefault();
       }}
     >
-      <ApplicationCard card={card} />
+      <ApplicationCard card={card} selected={selected} />
     </div>
   );
 }

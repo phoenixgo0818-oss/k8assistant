@@ -428,6 +428,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      add_application_note: {
+        Args: {
+          p_application_id: string
+          p_body: string
+          p_workspace_id: string
+        }
+        Returns: string
+      }
       create_application: {
         Args: {
           p_candidate_id: string
@@ -449,6 +457,10 @@ export type Database = {
         }
         Returns: string
       }
+      create_label: {
+        Args: { p_color: string; p_name: string; p_workspace_id: string }
+        Returns: string
+      }
       find_or_create_company: {
         Args: { p_name: string; p_workspace_id: string }
         Returns: string
@@ -459,6 +471,31 @@ export type Database = {
           p_rank: string
           p_stage_id: string
           p_workspace_id: string
+        }
+        Returns: undefined
+      }
+      set_application_label: {
+        Args: {
+          p_application_id: string
+          p_label_id: string
+          p_on: boolean
+          p_workspace_id: string
+        }
+        Returns: undefined
+      }
+      update_candidate: {
+        Args: {
+          p_candidate_id: string
+          p_context: string
+          p_email: string
+          p_headline: string
+          p_links: string[]
+          p_name: string
+          p_phone: string
+          p_skills: string[]
+          p_source: string
+          p_workspace_id: string
+          p_years_experience: number
         }
         Returns: undefined
       }
