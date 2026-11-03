@@ -1,16 +1,22 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { getCandidates } from "@/lib/queries";
+import { getCandidates, getFormOptions } from "@/lib/queries";
+import { NewCandidateButton } from "@/components/CreateButtons";
 
 export const metadata: Metadata = { title: "Candidates" };
 
 export default async function CandidatesPage() {
-  const candidates = await getCandidates();
+  const [candidates, options] = await Promise.all([getCandidates(), getFormOptions()]);
 
   return (
     <main className="mx-auto w-full max-w-4xl px-4 py-6 sm:px-6">
-      <h1 className="text-xl font-semibold text-zinc-900 dark:text-zinc-50">Candidates</h1>
-      <p className="mt-1 text-sm text-zinc-500">{candidates.length} engineers</p>
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h1 className="text-xl font-semibold text-zinc-900 dark:text-zinc-50">Candidates</h1>
+          <p className="mt-1 text-sm text-zinc-500">{candidates.length} engineers</p>
+        </div>
+        <NewCandidateButton options={options} />
+      </div>
 
       <ul className="mt-5 divide-y divide-zinc-200 overflow-hidden rounded-xl border border-zinc-200 bg-white dark:divide-zinc-800 dark:border-zinc-800 dark:bg-zinc-900">
         {candidates.map((c) => (

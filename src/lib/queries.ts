@@ -220,3 +220,29 @@ export async function getCandidate(id: string): Promise<CandidateDetail | null> 
     applications,
   };
 }
+
+// ---------------------------------------------------------------------------
+// Options for the "new candidate / new application" forms
+// ---------------------------------------------------------------------------
+export type FormOptions = {
+  candidates: { id: string; name: string }[];
+  companies: string[];
+  stages: { id: string; name: string }[];
+};
+
+export async function getFormOptions(): Promise<FormOptions> {
+  await connection();
+  const supabase = db();
+  const [cands, comps, stages] = await Promise.all([
+    supabase.from("candidates").select("id, name").eq("workspace_id", DEFAULT_WORKSPACE_ID).is("archived_at", null).order("name"),
+    supabase.from("companies").select("name").eq("workspace_id", DEFAULT_WORKSPACE_ID).order("name"),
+    supabase.from("stages").select("id, name").eq("workspace_id", DEFAULT_WORKSPACE_ID).order("sort_order"),
+  ]);
+  for (const r of [cands, comps, stages]) if (r.error) throw new Error(`Loading form options failed: ${r.error.message}`);
+
+  return {
+    candidates: cands.data!,
+    companies: comps.data!.map((c) => c.name),
+    stages: stages.data!,
+  };
+}
