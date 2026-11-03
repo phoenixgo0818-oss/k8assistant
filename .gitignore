@@ -35,3 +35,6 @@ yarn-error.log*
 __pycache__/
 *.pyc
 .venv/
+
+# Local scratch (test scripts, screenshots)
+/.tmp/

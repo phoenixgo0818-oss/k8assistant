@@ -1,20 +1,19 @@
+import { Suspense } from "react";
 import { getApplicationDetail, getBoard, getFormOptions } from "@/lib/queries";
 import { Board } from "@/components/Board";
 import { NewApplicationButton, NewCandidateButton } from "@/components/CreateButtons";
 import { DetailPanel } from "@/components/panel/DetailPanel";
 
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 export default async function BoardPage(props: PageProps<"/">) {
   // ?card=<id> in the URL = which card's detail panel is open
   const { card } = await props.searchParams;
-  const cardId = typeof card === "string" ? card : undefined;
+  const cardId = typeof card === "string" && UUID.test(card) ? card : undefined;
 
-  // Server Component: fetch on the server (in parallel), hand plain data to
-  // the interactive (client) Board and panel.
-  const [columns, options, detail] = await Promise.all([
-    getBoard(),
-    getFormOptions(),
-    cardId ? getApplicationDetail(cardId) : Promise.resolve(null),
-  ]);
+  // Server Component: fetch the board on the server (in parallel) and hand
+  // plain data to the interactive (client) Board.
+  const [columns, options] = await Promise.all([getBoard(), getFormOptions()]);
   const total = columns.reduce((n, c) => n + c.cards.length, 0);
 
   return (
@@ -28,10 +27,21 @@ export default async function BoardPage(props: PageProps<"/">) {
         </div>
       </div>
 
-      <Board columns={columns} selectedId={detail?.id} />
+      <Board columns={columns} selectedId={cardId} />
 
-      {/* An unknown or stale ?card= id simply shows no panel */}
-      {detail && <DetailPanel detail={detail} />}
+      {/* The panel streams in separately: the board never waits for it.
+          Meanwhile the board shows an instant preview (PanelPreview). */}
+      {cardId && (
+        <Suspense key={cardId} fallback={null}>
+          <CardPanel id={cardId} />
+        </Suspense>
+      )}
     </main>
   );
+}
+
+async function CardPanel({ id }: { id: string }) {
+  const detail = await getApplicationDetail(id);
+  // An unknown or stale ?card= id simply shows no panel
+  return detail ? <DetailPanel detail={detail} /> : null;
 }

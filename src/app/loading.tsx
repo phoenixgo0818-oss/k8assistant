@@ -7,12 +7,12 @@ export default function BoardLoading() {
       <div className="px-4 pt-5 pb-3 sm:px-6">
         <div className="h-7 w-32 animate-pulse rounded bg-slate-200 dark:bg-slate-800" />
       </div>
-      <div className="flex gap-3 overflow-hidden px-4 sm:px-6">
-        {Array.from({ length: 5 }, (_, i) => (
-          <div key={i} className="flex w-[17.5rem] shrink-0 flex-col gap-2 glass rounded-2xl p-3">
+      <div className="flex gap-2 overflow-hidden px-4 sm:px-6">
+        {Array.from({ length: 8 }, (_, i) => (
+          <div key={i} className="flex w-[10.5rem] shrink-0 flex-col gap-1.5 glass rounded-2xl p-2">
             <div className="h-4 w-24 animate-pulse rounded bg-slate-200 dark:bg-slate-800" />
             {Array.from({ length: 3 - (i % 2) }, (_, j) => (
-              <div key={j} className="h-16 animate-pulse rounded-xl bg-white/60 dark:bg-slate-800/50" />
+              <div key={j} className="h-20 animate-pulse rounded-xl bg-white/60 dark:bg-slate-800/50" />
             ))}
           </div>
         ))}

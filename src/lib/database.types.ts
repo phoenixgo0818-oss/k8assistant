@@ -464,8 +464,22 @@ export type Database = {
         Args: { p_color: string; p_name: string; p_workspace_id: string }
         Returns: string
       }
+      create_stage: {
+        Args: { p_color: string; p_name: string; p_workspace_id: string }
+        Returns: string
+      }
       delete_application: {
         Args: { p_application_id: string; p_workspace_id: string }
+        Returns: undefined
+      }
+      delete_stage: {
+        Args: {
+          p_application_ids: string[]
+          p_ranks: string[]
+          p_stage_id: string
+          p_target_stage_id: string
+          p_workspace_id: string
+        }
         Returns: undefined
       }
       engineer_palette: { Args: never; Returns: string[] }

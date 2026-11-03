@@ -5,7 +5,7 @@
 // endpoint, so treat every argument as untrusted input and validate it.
 
 import { refresh } from "next/cache";
-import { generateKeyBetween } from "fractional-indexing";
+import { generateKeyBetween, generateNKeysBetween } from "fractional-indexing";
 import { z } from "zod";
 import { db, DEFAULT_WORKSPACE_ID } from "@/lib/supabase";
 import { ENGINEER_COLORS, LABEL_COLORS } from "@/lib/constants";
@@ -536,6 +536,69 @@ export async function setCandidateColor(input: { candidateId: string; color: str
   if (error) {
     console.error("setCandidateColor failed", error);
     return { ok: false };
+  }
+  refresh();
+  return { ok: true };
+}
+
+// ---------------------------------------------------------------------------
+// Board columns (stages)
+// ---------------------------------------------------------------------------
+export async function createStage(_prev: FormState, formData: FormData): Promise<FormState> {
+  const parsed = z
+    .object({
+      name: z.string().trim().min(1, "Name is required").max(40),
+      color: z.enum(LABEL_COLORS).catch("#64748b"),
+    })
+    .safeParse(formValues(formData));
+  if (!parsed.success) return invalid(parsed.error);
+
+  const { error } = await db().rpc("create_stage", {
+    p_workspace_id: DEFAULT_WORKSPACE_ID,
+    p_name: parsed.data.name,
+    p_color: parsed.data.color,
+  });
+  if (error) {
+    if (error.code === DUPLICATE) return { ok: false, fieldErrors: { name: ["A column with this name already exists"] } };
+    console.error("createStage failed", error);
+    return { ok: false, message: "Couldn't add the column." };
+  }
+  refresh();
+  return { ok: true, submittedAt: Date.now() };
+}
+
+/** Remove a column; its cards (if any) go to the bottom of `targetStageId`, in order. */
+export async function deleteStage(input: { stageId: string; targetStageId: string | null }): Promise<{ ok: boolean; message?: string }> {
+  const parsed = z.object({ stageId: uuid, targetStageId: uuid.nullable() }).safeParse(input);
+  if (!parsed.success) return { ok: false };
+  const { stageId, targetStageId } = parsed.data;
+
+  try {
+    // Every card in the column, including hidden ones of archived engineers
+    const { data: apps, error } = await db()
+      .from("applications")
+      .select("id")
+      .eq("stage_id", stageId)
+      .order("rank");
+    if (error) throw new Error(error.message);
+
+    let ranks: string[] = [];
+    if (apps.length > 0) {
+      if (!targetStageId) return { ok: false, message: "Choose where its cards should go." };
+      ranks = generateNKeysBetween(await lastRankInStage(targetStageId), null, apps.length);
+    }
+
+    const { error: rpcError } = await db().rpc("delete_stage", {
+      p_workspace_id: DEFAULT_WORKSPACE_ID,
+      p_stage_id: stageId,
+      p_target_stage_id: targetStageId as string, // null is fine when the column is empty
+      p_application_ids: apps.map((a) => a.id),
+      p_ranks: ranks,
+    });
+    if (rpcError) return { ok: false, message: rpcError.message };
+  } catch (e) {
+    console.error("deleteStage failed", e);
+    return { ok: false, message: "Couldn't remove the column." };
   }
   refresh();
   return { ok: true };

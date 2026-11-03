@@ -26,7 +26,7 @@ doing it. I am new to coding.
 - Stack: Next.js (App Router) + TypeScript + Tailwind, Supabase (Postgres),
   Vercel, GitHub Actions; RabbitMQ (CloudAMQP) from Phase 4.
 - Board card = application (candidate × company × role), not a candidate.
-- Current phase: Phase 2 — Pipeline Board v1 (step 2.4 detail panel).
+- Current phase: Phase 2 — Pipeline Board v1 (step 2.5 next: stages/labels management, search, filters).
 - Writes go through Server Actions (`src/app/actions.ts`, zod-validated) that
   call Postgres functions (RPC) so each change + its activity row is one transaction.
 - Production: https://k8assistant.vercel.app
@@ -34,6 +34,12 @@ doing it. I am new to coding.
   utilities and `.btn-primary` / `.btn-secondary` / `.input-field` live in
   `src/app/globals.css`; use them instead of one-off colours. Slate + sky palette.
   Each engineer has a `color` (palette in `src/lib/constants.ts` and the DB).
+  Cards use `card-material` (no backdrop blur on cards: too costly at scale).
+- Board performance: Column/SortableCard/ApplicationCard are memoised; hover
+  spotlight is CSS via one <style> tag (no React state); the detail panel
+  streams in a Suspense boundary while PanelPreview shows instantly.
+- Vercel functions run in lhr1 (London) next to Supabase eu-west-2 (vercel.json).
+- Local scratch (test scripts, screenshots) goes in git-ignored `.tmp/`.
 - Supabase project ref: iyusfcsxadcrnxwqrgxb (dev DB, fake data).
 - Data access is server-only (`src/lib/supabase.ts`, secret key, `server-only`).
   `cacheComponents` is on: request-time reads call `await connection()` and sit
