@@ -32,7 +32,10 @@ doing it. I am new to coding.
 - Production: https://k8assistant.vercel.app
 - Design system: tokens + `glass`, `glass-strong`, `brand-gradient`, `brand-text`
   utilities and `.btn-primary` / `.btn-secondary` / `.input-field` live in
-  `src/app/globals.css`; use them instead of one-off colours. Slate + sky palette.
+  `src/app/globals.css`; use them instead of one-off colours. Brand = VS Code-logo
+  blues (#1f9cf0 → #007acc → #0065a9) as a gradient backdrop; text directly on it
+  uses `text-on-backdrop`; non-board pages sit on a `glass-strong` sheet with
+  `glass-inset` lists inside.
   Each engineer has a `color` (palette in `src/lib/constants.ts` and the DB).
   Cards use `card-material` (no backdrop blur on cards: too costly at scale).
 - Board performance: Column/SortableCard/ApplicationCard are memoised; hover

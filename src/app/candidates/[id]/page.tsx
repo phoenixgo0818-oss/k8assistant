@@ -27,7 +27,7 @@ export default async function CandidatePage(props: PageProps<"/candidates/[id]">
   ].filter((f): f is [string, string] => f[1] != null);
 
   return (
-    <main className="mx-auto w-full max-w-4xl px-4 py-6 sm:px-6">
+    <main className="mx-auto my-6 w-[calc(100%-2rem)] max-w-4xl rounded-3xl glass-strong px-4 py-6 sm:px-8">
       <Link href="/" className="text-sm text-slate-500 hover:text-slate-800 dark:hover:text-slate-200">
         ← Board
       </Link>
@@ -78,7 +78,7 @@ export default async function CandidatePage(props: PageProps<"/candidates/[id]">
             {candidate.applications.map((app) => (
               <li
                 key={app.id}
-                className="glass rounded-2xl p-3"
+                className="glass-inset rounded-2xl p-3"
               >
                 <Link href={`/?card=${app.id}`} className="flex flex-wrap items-center gap-x-3 gap-y-1 hover:underline">
                   <p className="font-medium text-slate-900 dark:text-slate-100">{app.company.name}</p>
@@ -125,7 +125,7 @@ export default async function CandidatePage(props: PageProps<"/candidates/[id]">
                       href={url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="break-all text-sky-700 hover:underline dark:text-sky-400"
+                      className="break-all text-[#0065a9] hover:underline dark:text-[#7cc4f7]"
                     >
                       {url.replace(/^https?:\/\//, "")}
                     </a>

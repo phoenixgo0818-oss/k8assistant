@@ -22,7 +22,7 @@ export function PanelPreview({ card, onDismiss }: { card: ApplicationCard; onDis
     };
   }, [onDismiss]);
 
-  const bar = "animate-pulse rounded-lg bg-sky-100/80 dark:bg-slate-800/70";
+  const bar = "animate-pulse rounded-lg bg-[#1f9cf0]/15 dark:bg-white/10";
   return (
     <div className="contents [&>aside]:z-[25]" aria-busy="true" onClickCapture={(e) => (e.target as HTMLElement).closest('a[href="/"]') && onDismiss()}>
       <PanelShell title={`${card.candidate.name} at ${card.company.name} (loading)`}>

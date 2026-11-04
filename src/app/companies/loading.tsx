@@ -1,7 +1,7 @@
 // Suspense boundary + skeleton for /companies and /companies/[id]
 export default function CompaniesLoading() {
   return (
-    <main className="mx-auto w-full max-w-4xl px-4 py-6 sm:px-6" aria-busy="true" aria-label="Loading">
+    <main className="mx-auto my-6 w-[calc(100%-2rem)] max-w-4xl rounded-3xl glass-strong px-4 py-6 sm:px-8" aria-busy="true" aria-label="Loading">
       <div className="h-7 w-40 animate-pulse rounded bg-slate-200 dark:bg-slate-800" />
       <div className="mt-5 space-y-2">
         {Array.from({ length: 5 }, (_, i) => (

@@ -36,8 +36,8 @@ export const ApplicationCard = memo(function ApplicationCard({
         onOpen?.(card);
       }}
       aria-current={selected ? "true" : undefined}
-      className={`card-material relative block overflow-hidden rounded-xl px-2.5 py-2 pl-3 focus-visible:outline-2 focus-visible:outline-sky-500 ${
-        selected ? "ring-2 ring-sky-400/70" : ""
+      className={`card-material relative block overflow-hidden rounded-xl px-2.5 py-2 pl-3 focus-visible:outline-2 focus-visible:outline-white ${
+        selected ? "ring-2 ring-white shadow-lg" : ""
       }`}
       style={{ backgroundImage: `linear-gradient(140deg, ${color}2e 0%, ${color}0d 50%, transparent 80%), var(--card-surface)` }}
     >

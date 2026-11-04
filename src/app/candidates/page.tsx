@@ -10,7 +10,7 @@ export default async function CandidatesPage() {
   const [candidates, archived, options] = await Promise.all([getCandidates(), getArchivedCandidates(), getFormOptions()]);
 
   return (
-    <main className="mx-auto w-full max-w-4xl px-4 py-6 sm:px-6">
+    <main className="mx-auto my-6 w-[calc(100%-2rem)] max-w-4xl rounded-3xl glass-strong px-4 py-6 sm:px-8">
       <div className="flex items-start justify-between gap-3">
         <div>
           <h1 className="text-xl font-semibold text-slate-900 dark:text-slate-50">Candidates</h1>
@@ -19,12 +19,12 @@ export default async function CandidatesPage() {
         <NewCandidateButton options={options} />
       </div>
 
-      <ul className="glass mt-5 divide-y divide-slate-200/60 overflow-hidden rounded-2xl dark:divide-slate-700/50">
+      <ul className="glass-inset mt-5 divide-y divide-slate-200/60 overflow-hidden rounded-2xl dark:divide-slate-700/50">
         {candidates.map((c) => (
           <li key={c.id}>
             <Link
               href={`/candidates/${c.id}`}
-              className="flex items-center gap-4 px-4 py-3 hover:bg-white/60 dark:hover:bg-slate-800/50"
+              className="flex items-center gap-4 px-4 py-3 hover:bg-white/80 dark:hover:bg-white/5"
             >
               <EngineerAvatar name={c.name} color={c.color} />
               <div className="min-w-0 flex-1">
@@ -48,7 +48,7 @@ export default async function CandidatesPage() {
           <summary className="cursor-pointer text-sm font-medium text-slate-600 dark:text-slate-400">
             Archived ({archived.length})
           </summary>
-          <ul className="glass mt-2 divide-y divide-slate-200/60 overflow-hidden rounded-2xl dark:divide-slate-700/50">
+          <ul className="glass-inset mt-2 divide-y divide-slate-200/60 overflow-hidden rounded-2xl dark:divide-slate-700/50">
             {archived.map((c) => (
               <li key={c.id}>
                 <Link

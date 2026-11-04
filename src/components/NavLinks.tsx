@@ -24,7 +24,7 @@ export function NavLinks({ pathname }: { pathname: string | null }) {
           aria-current={isActive(item.href) ? "page" : undefined}
           className={`rounded-lg px-3 py-1.5 font-medium transition ${
             isActive(item.href)
-              ? "bg-sky-500/10 text-sky-700 dark:bg-sky-400/15 dark:text-sky-300"
+              ? "bg-[#007acc]/10 text-[#0065a9] dark:bg-[#1f9cf0]/15 dark:text-[#7cc4f7]"
               : "text-slate-600 hover:bg-white/60 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800/60 dark:hover:text-slate-100"
           }`}
         >

@@ -30,7 +30,7 @@ export function AddColumnTile() {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="flex w-[var(--col-w)] shrink-0 items-start justify-center rounded-2xl border-2 border-dashed border-sky-300/70 p-3 text-sm font-medium text-sky-700 transition hover:border-sky-400 hover:bg-white/30 dark:border-sky-800 dark:text-sky-300"
+        className="flex w-[var(--col-w)] shrink-0 items-start justify-center rounded-2xl border-2 border-dashed border-white/40 p-3 text-sm font-medium text-white/85 transition hover:border-white/80 hover:bg-white/10 hover:text-white"
       >
         + Column
       </button>

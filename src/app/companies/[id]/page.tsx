@@ -19,13 +19,13 @@ export default async function CompanyPage(props: PageProps<"/companies/[id]">) {
   if (!company) notFound();
 
   return (
-    <main className="mx-auto w-full max-w-4xl px-4 py-6 sm:px-6">
+    <main className="mx-auto my-6 w-[calc(100%-2rem)] max-w-4xl rounded-3xl glass-strong px-4 py-6 sm:px-8">
       <Link href="/companies" className="text-sm text-slate-500 hover:text-slate-800 dark:hover:text-slate-200">
         ← Companies
       </Link>
       <h1 className="mt-3 text-2xl font-semibold text-slate-900 dark:text-slate-50">{company.name}</h1>
       {company.website && (
-        <a href={company.website} target="_blank" rel="noopener noreferrer" className="text-sm text-sky-700 hover:underline dark:text-sky-400">
+        <a href={company.website} target="_blank" rel="noopener noreferrer" className="text-sm text-[#0065a9] hover:underline dark:text-[#7cc4f7]">
           {company.website.replace(/^https?:\/\//, "")}
         </a>
       )}
@@ -40,7 +40,7 @@ export default async function CompanyPage(props: PageProps<"/companies/[id]">) {
               <li key={p.id}>
                 <Link
                   href={p.candidate.archived ? `/candidates/${p.candidate.id}` : `/?card=${p.id}`}
-                  className="flex flex-wrap items-center gap-x-3 gap-y-1 glass rounded-2xl p-3 transition hover:bg-white/70 dark:hover:bg-slate-800/60"
+                  className="flex flex-wrap items-center gap-x-3 gap-y-1 glass-inset rounded-2xl p-3 transition hover:bg-white/70 dark:hover:bg-slate-800/60"
                 >
                   <EngineerAvatar name={p.candidate.name} color={p.candidate.color} size="sm" />
                   <span className="font-medium text-slate-900 dark:text-slate-100">{p.candidate.name}</span>

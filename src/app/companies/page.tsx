@@ -9,7 +9,7 @@ export default async function CompaniesPage() {
   const companies = await getCompanies();
 
   return (
-    <main className="mx-auto w-full max-w-4xl px-4 py-6 sm:px-6">
+    <main className="mx-auto my-6 w-[calc(100%-2rem)] max-w-4xl rounded-3xl glass-strong px-4 py-6 sm:px-8">
       <div className="flex items-start justify-between gap-3">
         <div>
           <h1 className="text-xl font-semibold text-slate-900 dark:text-slate-50">Companies</h1>
@@ -20,10 +20,10 @@ export default async function CompaniesPage() {
         <NewCompanyButton />
       </div>
 
-      <ul className="glass mt-5 divide-y divide-slate-200/60 overflow-hidden rounded-2xl dark:divide-slate-700/50">
+      <ul className="glass-inset mt-5 divide-y divide-slate-200/60 overflow-hidden rounded-2xl dark:divide-slate-700/50">
         {companies.map((c) => (
           <li key={c.id}>
-            <Link href={`/companies/${c.id}`} className="flex items-center gap-4 px-4 py-3 hover:bg-white/60 dark:hover:bg-slate-800/50">
+            <Link href={`/companies/${c.id}`} className="flex items-center gap-4 px-4 py-3 hover:bg-white/80 dark:hover:bg-white/5">
               <div className="min-w-0 flex-1">
                 <p className="font-medium text-slate-900 dark:text-slate-100">{c.name}</p>
                 {c.website && <p className="truncate text-sm text-slate-500">{c.website.replace(/^https?:\/\//, "")}</p>}

@@ -8,7 +8,7 @@ export default function Error({ error, retry }: { error: unknown; retry: () => v
   }, [error]);
 
   return (
-    <main className="mx-auto flex max-w-md flex-1 flex-col items-center justify-center gap-3 px-4 text-center">
+    <main className="glass-strong mx-auto my-16 flex w-[calc(100%-2rem)] max-w-md flex-col items-center justify-center gap-3 rounded-3xl px-6 py-10 text-center">
       <h1 className="text-lg font-semibold text-slate-900 dark:text-slate-50">Couldn&apos;t load the board</h1>
       <p className="text-sm text-slate-600 dark:text-slate-400">
         The database may be paused or unreachable. Supabase free projects pause after 7 idle days —

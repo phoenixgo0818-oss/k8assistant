@@ -299,16 +299,16 @@ const Column = memo(function Column({
     <section
       aria-label={`${column.name}, ${column.cards.length} cards`}
       className={`group/col glass flex w-[var(--col-w)] shrink-0 flex-col rounded-2xl p-1.5 ${
-        targeted ? "ring-2 ring-sky-400/80 !bg-sky-100/70 dark:!bg-sky-900/40" : column.isFinal ? "opacity-90" : ""
+        targeted ? "ring-2 ring-white/90 !bg-white/30 dark:!bg-white/15" : column.isFinal ? "opacity-90" : ""
       }`}
     >
       <header className="relative flex items-start gap-1.5 px-1.5 py-1">
         <span className="mt-[3px] flex"><StageDot color={column.color} /></span>
         {/* names wrap to a second line instead of being cut off */}
-        <h2 className="min-w-0 flex-1 text-[13px] leading-tight font-semibold break-words text-slate-800 dark:text-slate-100">
+        <h2 className="min-w-0 flex-1 text-[13px] leading-tight font-semibold break-words text-white [text-shadow:0_1px_2px_rgb(0_32_64/0.35)]">
           {column.name}
         </h2>
-        <span className="rounded-full bg-white/75 px-1.5 text-[11px] font-semibold text-slate-600 shadow-sm dark:bg-slate-800/80 dark:text-slate-300">
+        <span className="rounded-full bg-white/25 px-1.5 text-[11px] font-semibold text-white ring-1 ring-white/30">
           {column.cards.length}
         </span>
         {/* "⋯" sits over the count and only shows on hover / keyboard focus */}
@@ -334,7 +334,7 @@ const Column = memo(function Column({
           {column.cards.length === 0 && (
             <p
               className={`rounded-lg border border-dashed p-3 text-center text-xs ${
-                targeted ? "border-sky-400 text-sky-600 dark:text-sky-300" : "border-sky-300/60 text-slate-400 dark:border-slate-700"
+                targeted ? "border-white text-white" : "border-white/40 text-white/70"
               }`}
             >
               Drop here
@@ -370,9 +370,9 @@ const SortableCard = memo(function SortableCard({
       style={{ transform: CSS.Transform.toString(transform), transition }}
       className={`touch-manipulation rounded-xl transition-opacity duration-150 ${isDragging ? "opacity-40" : ""} ${
         dropLine === "before"
-          ? "shadow-[0_-5px_0_-2px_rgb(14_165_233)]"
+          ? "shadow-[0_-5px_0_-2px_rgb(255_255_255)]"
           : dropLine === "after"
-            ? "shadow-[0_5px_0_-2px_rgb(14_165_233)]"
+            ? "shadow-[0_5px_0_-2px_rgb(255_255_255)]"
             : ""
       }`}
       onPointerEnter={(e) => e.pointerType === "mouse" && onSpotlight(card.candidate.id)}

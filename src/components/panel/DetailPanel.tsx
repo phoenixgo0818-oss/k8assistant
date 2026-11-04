@@ -75,7 +75,7 @@ export function DetailPanel({ detail }: { detail: ApplicationDetail }) {
         </div>
         <Link
           href={`/candidates/${candidate.id}`}
-          className="mt-2 inline-block text-xs font-medium text-sky-700 hover:underline dark:text-sky-400"
+          className="mt-2 inline-block text-xs font-medium text-[#0065a9] hover:underline dark:text-[#7cc4f7]"
         >
           View all processes{candidate.otherProcesses > 0 && ` (+${candidate.otherProcesses} more)`} →
         </Link>
