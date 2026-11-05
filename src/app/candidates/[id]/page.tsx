@@ -4,6 +4,8 @@ import { notFound } from "next/navigation";
 import { getCandidate, getFormOptions } from "@/lib/queries";
 import { NewApplicationButton } from "@/components/CreateButtons";
 import { LabelChip, StageDot } from "@/components/LabelChip";
+import { EngineerAvatar } from "@/components/EngineerAvatar";
+import { EngineerColorPicker } from "@/components/EngineerColorPicker";
 import { ArchiveCandidateButton, DeleteCandidateButton, RestoreCandidateButton } from "@/components/RemoveButtons";
 
 export async function generateMetadata(props: PageProps<"/candidates/[id]">): Promise<Metadata> {
@@ -25,8 +27,8 @@ export default async function CandidatePage(props: PageProps<"/candidates/[id]">
   ].filter((f): f is [string, string] => f[1] != null);
 
   return (
-    <main className="mx-auto w-full max-w-4xl px-4 py-6 sm:px-6">
-      <Link href="/" className="text-sm text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200">
+    <main className="mx-auto my-6 w-[calc(100%-2rem)] max-w-4xl rounded-3xl glass-strong px-4 py-6 sm:px-8">
+      <Link href="/" className="text-sm text-slate-500 hover:text-slate-800 dark:hover:text-slate-200">
         ← Board
       </Link>
 
@@ -39,15 +41,21 @@ export default async function CandidatePage(props: PageProps<"/candidates/[id]">
         </div>
       )}
 
-      <h1 className="mt-3 text-2xl font-semibold text-zinc-900 dark:text-zinc-50">{candidate.name}</h1>
-      {candidate.headline && <p className="text-zinc-600 dark:text-zinc-400">{candidate.headline}</p>}
+      <div className="mt-4 flex flex-wrap items-center gap-4">
+        <EngineerAvatar name={candidate.name} color={candidate.color} size="lg" />
+        <div className="min-w-0 flex-1">
+          <h1 className="text-2xl font-semibold text-slate-900 dark:text-slate-50">{candidate.name}</h1>
+          {candidate.headline && <p className="text-slate-600 dark:text-slate-400">{candidate.headline}</p>}
+        </div>
+        <EngineerColorPicker candidateId={candidate.id} color={candidate.color} />
+      </div>
 
       {candidate.skills.length > 0 && (
         <div className="mt-3 flex flex-wrap gap-1.5">
           {candidate.skills.map((s) => (
             <span
               key={s}
-              className="rounded-md bg-zinc-200/70 px-2 py-0.5 text-xs font-medium text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300"
+              className="rounded-lg border border-white/80 bg-white/60 px-2 py-0.5 text-xs font-medium text-slate-700 dark:border-slate-700 dark:bg-slate-800/60 dark:text-slate-300"
             >
               {s}
             </span>
@@ -59,7 +67,7 @@ export default async function CandidatePage(props: PageProps<"/candidates/[id]">
         {/* Processes: the reason this page exists */}
         <section>
           <div className="flex items-center justify-between gap-3">
-            <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-500">
+            <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
               Processes ({candidate.applications.length})
             </h2>
             {!candidate.archivedAt && (
@@ -70,12 +78,12 @@ export default async function CandidatePage(props: PageProps<"/candidates/[id]">
             {candidate.applications.map((app) => (
               <li
                 key={app.id}
-                className="rounded-lg border border-zinc-200 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-900"
+                className="glass-inset rounded-2xl p-3"
               >
                 <Link href={`/?card=${app.id}`} className="flex flex-wrap items-center gap-x-3 gap-y-1 hover:underline">
-                  <p className="font-medium text-zinc-900 dark:text-zinc-100">{app.company.name}</p>
-                  <p className="text-sm text-zinc-600 dark:text-zinc-400">{app.role}</p>
-                  <span className="ml-auto inline-flex items-center gap-1.5 text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                  <p className="font-medium text-slate-900 dark:text-slate-100">{app.company.name}</p>
+                  <p className="text-sm text-slate-600 dark:text-slate-400">{app.role}</p>
+                  <span className="ml-auto inline-flex items-center gap-1.5 text-sm font-medium text-slate-700 dark:text-slate-300">
                     <StageDot color={app.stage.color} />
                     {app.stage.name}
                   </span>
@@ -90,7 +98,7 @@ export default async function CandidatePage(props: PageProps<"/candidates/[id]">
               </li>
             ))}
             {candidate.applications.length === 0 && (
-              <li className="text-sm text-zinc-500">No active processes.</li>
+              <li className="text-sm text-slate-500">No active processes.</li>
             )}
           </ul>
         </section>
@@ -101,15 +109,15 @@ export default async function CandidatePage(props: PageProps<"/candidates/[id]">
             <dl className="space-y-2">
               {facts.map(([k, v]) => (
                 <div key={k}>
-                  <dt className="text-zinc-500">{k}</dt>
-                  <dd className="break-words text-zinc-900 dark:text-zinc-100">{v}</dd>
+                  <dt className="text-slate-500">{k}</dt>
+                  <dd className="break-words text-slate-900 dark:text-slate-100">{v}</dd>
                 </div>
               ))}
             </dl>
           )}
           {candidate.links.length > 0 && (
             <div>
-              <p className="text-zinc-500">Links</p>
+              <p className="text-slate-500">Links</p>
               <ul>
                 {candidate.links.map((url) => (
                   <li key={url}>
@@ -117,7 +125,7 @@ export default async function CandidatePage(props: PageProps<"/candidates/[id]">
                       href={url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="break-all text-indigo-600 hover:underline dark:text-indigo-400"
+                      className="break-all text-[#0065a9] hover:underline dark:text-[#7cc4f7]"
                     >
                       {url.replace(/^https?:\/\//, "")}
                     </a>
@@ -128,15 +136,15 @@ export default async function CandidatePage(props: PageProps<"/candidates/[id]">
           )}
           {candidate.context && (
             <div>
-              <p className="text-zinc-500">Context</p>
-              <p className="whitespace-pre-line text-zinc-900 dark:text-zinc-100">{candidate.context}</p>
+              <p className="text-slate-500">Context</p>
+              <p className="whitespace-pre-line text-slate-900 dark:text-slate-100">{candidate.context}</p>
             </div>
           )}
         </aside>
       </div>
 
       {/* Removing the engineer */}
-      <section className="mt-10 flex flex-wrap items-center gap-6 border-t border-zinc-200 pt-4 dark:border-zinc-800">
+      <section className="mt-10 flex flex-wrap items-center gap-6 border-t border-slate-200 pt-4 dark:border-slate-800">
         {!candidate.archivedAt && <ArchiveCandidateButton candidateId={candidate.id} name={candidate.name} />}
         <DeleteCandidateButton candidateId={candidate.id} name={candidate.name} processes={candidate.applications.length} />
       </section>

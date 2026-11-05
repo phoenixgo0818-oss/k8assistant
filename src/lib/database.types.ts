@@ -235,6 +235,7 @@ export type Database = {
       candidates: {
         Row: {
           archived_at: string | null
+          color: string
           context: string | null
           created_at: string
           email: string | null
@@ -251,6 +252,7 @@ export type Database = {
         }
         Insert: {
           archived_at?: string | null
+          color: string
           context?: string | null
           created_at?: string
           email?: string | null
@@ -267,6 +269,7 @@ export type Database = {
         }
         Update: {
           archived_at?: string | null
+          color?: string
           context?: string | null
           created_at?: string
           email?: string | null
@@ -461,10 +464,25 @@ export type Database = {
         Args: { p_color: string; p_name: string; p_workspace_id: string }
         Returns: string
       }
+      create_stage: {
+        Args: { p_color: string; p_name: string; p_workspace_id: string }
+        Returns: string
+      }
       delete_application: {
         Args: { p_application_id: string; p_workspace_id: string }
         Returns: undefined
       }
+      delete_stage: {
+        Args: {
+          p_application_ids: string[]
+          p_ranks: string[]
+          p_stage_id: string
+          p_target_stage_id: string
+          p_workspace_id: string
+        }
+        Returns: undefined
+      }
+      engineer_palette: { Args: never; Returns: string[] }
       find_or_create_company: {
         Args: { p_name: string; p_workspace_id: string }
         Returns: string
@@ -478,6 +496,7 @@ export type Database = {
         }
         Returns: undefined
       }
+      next_engineer_color: { Args: { p_workspace_id: string }; Returns: string }
       set_application_label: {
         Args: {
           p_application_id: string

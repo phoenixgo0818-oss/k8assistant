@@ -5,14 +5,14 @@ export default function BoardLoading() {
   return (
     <main className="flex flex-1 flex-col" aria-busy="true" aria-label="Loading board">
       <div className="px-4 pt-5 pb-3 sm:px-6">
-        <div className="h-7 w-32 animate-pulse rounded bg-zinc-200 dark:bg-zinc-800" />
+        <div className="h-7 w-32 animate-pulse rounded bg-slate-200 dark:bg-slate-800" />
       </div>
-      <div className="flex gap-3 overflow-hidden px-4 sm:px-6">
-        {Array.from({ length: 5 }, (_, i) => (
-          <div key={i} className="flex w-72 shrink-0 flex-col gap-2 rounded-xl bg-zinc-100 p-3 dark:bg-zinc-900/70">
-            <div className="h-4 w-24 animate-pulse rounded bg-zinc-200 dark:bg-zinc-800" />
+      <div className="flex gap-2 overflow-hidden px-4 sm:px-6">
+        {Array.from({ length: 8 }, (_, i) => (
+          <div key={i} className="flex w-[10.5rem] shrink-0 flex-col gap-1.5 glass rounded-2xl p-2">
+            <div className="h-4 w-24 animate-pulse rounded bg-slate-200 dark:bg-slate-800" />
             {Array.from({ length: 3 - (i % 2) }, (_, j) => (
-              <div key={j} className="h-16 animate-pulse rounded-lg bg-white dark:bg-zinc-900" />
+              <div key={j} className="h-20 animate-pulse rounded-xl bg-white/60 dark:bg-slate-800/50" />
             ))}
           </div>
         ))}

@@ -1,26 +1,155 @@
 @import "tailwindcss";
 
+/* =============================================================================
+   K8assistant design tokens
+   Light blue, frosted glass, soft gradients. Change the look here, not in
+   every component.
+   ============================================================================= */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #007acc;
+  --foreground: #0b1b2b;
+
+  /* Brand: the three blues of the VS Code logo, light → deep */
+  --blue-1: #1f9cf0;
+  --blue-2: #007acc;
+  --blue-3: #0065a9;
+  --brand-from: var(--blue-1);
+  --brand-to: var(--blue-3);
+
+  /* Page backdrop: blue gradient with soft light patches */
+  --backdrop:
+    radial-gradient(55rem 38rem at 8% -12%, rgb(255 255 255 / 0.28), transparent 60%),
+    radial-gradient(50rem 40rem at 100% 105%, rgb(31 156 240 / 0.75), transparent 62%),
+    radial-gradient(40rem 30rem at 70% 20%, rgb(125 211 252 / 0.22), transparent 60%),
+    linear-gradient(135deg, var(--blue-3) 0%, var(--blue-2) 48%, var(--blue-1) 100%);
+
+  /* Text sitting directly on the blue backdrop */
+  --on-backdrop: #ffffff;
+  --on-backdrop-muted: rgb(255 255 255 / 0.78);
+
+  /* See-through glass on the blue: board columns */
+  --glass-bg: rgb(255 255 255 / 0.14);
+  --glass-border: rgb(255 255 255 / 0.32);
+  --glass-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.35),
+    0 14px 34px -14px rgb(0 32 64 / 0.5);
+
+  /* Light frosted sheet: header, panel, dialogs, page content */
+  --glass-strong-bg: rgb(246 251 255 / 0.84);
+  --glass-strong-border: rgb(255 255 255 / 0.7);
+
+  /* Glass cards: translucent white, bright edge, inner highlight (no blur) */
+  --card-surface: linear-gradient(160deg, rgb(255 255 255 / 0.74), rgb(255 255 255 / 0.5));
+  --card-border: rgb(255 255 255 / 0.75);
+  --card-shadow: inset 0 1px 0 rgb(255 255 255 / 0.9), 0 4px 10px -6px rgb(0 32 64 / 0.5);
+  --card-shadow-hover: inset 0 1px 0 rgb(255 255 255 / 1), 0 6px 14px -6px rgb(0 32 64 / 0.6);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #041526;
+    --foreground: #e3eefa;
+    --backdrop:
+      radial-gradient(55rem 38rem at 8% -12%, rgb(31 156 240 / 0.3), transparent 60%),
+      radial-gradient(50rem 40rem at 100% 105%, rgb(0 122 204 / 0.35), transparent 62%),
+      linear-gradient(135deg, #03101e 0%, #062645 55%, #0a3a63 100%);
+    --glass-bg: rgb(255 255 255 / 0.06);
+    --glass-border: rgb(147 197 253 / 0.16);
+    --glass-shadow: inset 0 1px 0 rgb(255 255 255 / 0.06), 0 14px 34px -14px rgb(0 0 0 / 0.6);
+    --glass-strong-bg: rgb(6 22 40 / 0.86);
+    --glass-strong-border: rgb(147 197 253 / 0.16);
+    --card-surface: linear-gradient(160deg, rgb(255 255 255 / 0.12), rgb(255 255 255 / 0.05));
+    --card-border: rgb(255 255 255 / 0.14);
+    --card-shadow: inset 0 1px 0 rgb(255 255 255 / 0.1), 0 8px 18px -10px rgb(0 0 0 / 0.7);
+    --card-shadow-hover: inset 0 1px 0 rgb(255 255 255 / 0.14), 0 14px 26px -10px rgb(0 0 0 / 0.75);
+  }
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-brand-from: var(--brand-from);
+  --color-brand-to: var(--brand-to);
+  --color-on-backdrop: var(--on-backdrop);
+  --color-on-backdrop-muted: var(--on-backdrop-muted);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+body {
+  background: var(--backdrop);
+  background-color: var(--background);
+  background-attachment: fixed;
+  color: var(--foreground);
+}
+
+/* ---------------------------------------------------------------------------
+   Reusable surfaces (utilities, so they work with hover:/dark: and @apply)
+   --------------------------------------------------------------------------- */
+
+/* See-through glass on the blue backdrop: board columns.
+   Deliberately NO backdrop blur: blurring a smooth gradient looks identical,
+   but every card hover would force the browser to re-blur the whole column
+   (measured: hover 0ms vs up to 800ms of blocked main thread). */
+@utility glass {
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow);
+}
+
+/* Light frosted sheet: header, panel, dialogs, page content */
+@utility glass-strong {
+  background: var(--glass-strong-bg);
+  border: 1px solid var(--glass-strong-border);
+  box-shadow: var(--glass-shadow);
+  @apply backdrop-blur-2xl backdrop-saturate-150;
+}
+
+/* Lists/cards INSIDE a light sheet (see-through glass would vanish there) */
+@utility glass-inset {
+  background: rgb(255 255 255 / 0.6);
+  border: 1px solid rgb(15 60 100 / 0.1);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.9), 0 4px 12px -8px rgb(0 32 64 / 0.3);
+  @variant dark {
+    background: rgb(255 255 255 / 0.05);
+    border-color: rgb(147 197 253 / 0.14);
+    box-shadow: none;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+/* Glass card: translucent layers + bright edge + highlight, no blur (cheap) */
+@utility card-material {
+  border: 1px solid var(--card-border);
+  box-shadow: var(--card-shadow);
+  transition: box-shadow 150ms ease;
+  &:hover {
+    box-shadow: var(--card-shadow-hover);
+    border-color: rgb(255 255 255);
+  }
+}
+
+@utility brand-gradient {
+  background-image: linear-gradient(135deg, var(--blue-1) 0%, var(--blue-2) 55%, var(--blue-3) 100%);
+}
+
+@utility brand-text {
+  background-image: linear-gradient(135deg, var(--brand-from), var(--brand-to));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* ---------------------------------------------------------------------------
+   Controls
+   --------------------------------------------------------------------------- */
+@layer components {
+  .btn-primary {
+    @apply brand-gradient inline-flex items-center justify-center gap-1.5 rounded-xl border border-white/30 px-4 py-2 text-sm font-medium text-white shadow-md shadow-[#0065a9]/40 transition hover:shadow-lg hover:brightness-110 disabled:opacity-50;
+  }
+  .btn-secondary {
+    @apply inline-flex items-center justify-center gap-1.5 rounded-xl border border-white/60 bg-white/80 px-3.5 py-2 text-sm font-medium text-slate-800 shadow-sm transition hover:bg-white disabled:opacity-50 dark:border-white/15 dark:bg-white/10 dark:text-slate-100 dark:hover:bg-white/15;
+  }
+  .input-field {
+    @apply w-full rounded-xl border border-slate-200/80 bg-white/65 px-3 py-2 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-[#1f9cf0] focus:bg-white/95 focus:ring-4 focus:ring-[#1f9cf0]/20 dark:border-slate-700 dark:bg-slate-900/60 dark:text-slate-100 dark:focus:bg-slate-900;
+  }
 }

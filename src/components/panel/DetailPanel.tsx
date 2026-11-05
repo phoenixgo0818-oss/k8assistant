@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { EngineerAvatar } from "../EngineerAvatar";
+import { EngineerColorPicker } from "../EngineerColorPicker";
 import type { Activity, ApplicationDetail } from "@/lib/queries";
 import { ArchiveCandidateButton, DeleteApplicationButton } from "../RemoveButtons";
 import { LabelPicker, LocalTime, NoteForm, NoteItem, PanelShell, ProfileForm, StagePicker } from "./PanelParts";
@@ -17,7 +19,7 @@ const FIELD_NAMES: Record<string, string> = {
 
 /** Turn an activity row into a readable sentence */
 function describe(a: Activity): React.ReactNode {
-  const b = (s: string | null) => <strong className="font-medium text-zinc-800 dark:text-zinc-200">{s || "—"}</strong>;
+  const b = (s: string | null) => <strong className="font-medium text-slate-800 dark:text-slate-200">{s || "—"}</strong>;
   switch (a.type) {
     case "candidate_created":
       return <>Profile created</>;
@@ -48,7 +50,7 @@ function describe(a: Activity): React.ReactNode {
 }
 
 function SectionTitle({ children }: { children: React.ReactNode }) {
-  return <h3 className="text-xs font-semibold uppercase tracking-wide text-zinc-500">{children}</h3>;
+  return <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-500">{children}</h3>;
 }
 
 export function DetailPanel({ detail }: { detail: ApplicationDetail }) {
@@ -58,16 +60,22 @@ export function DetailPanel({ detail }: { detail: ApplicationDetail }) {
     <PanelShell title={`${candidate.name} at ${detail.company.name}`}>
       {/* Header */}
       <div>
-        <p className="text-sm text-zinc-500">
-          <Link href={`/companies/${detail.company.id}`} className="font-medium text-zinc-700 hover:underline dark:text-zinc-300">
+        <p className="text-sm text-slate-500">
+          <Link href={`/companies/${detail.company.id}`} className="font-medium text-slate-700 hover:underline dark:text-slate-300">
             {detail.company.name}
           </Link>{" "}
           · {detail.role}
         </p>
-        <h2 className="text-xl font-semibold text-zinc-900 dark:text-zinc-50">{candidate.name}</h2>
+        <div className="mt-1 flex items-center gap-3">
+          <EngineerAvatar name={candidate.name} color={candidate.color} size="lg" />
+          <h2 className="text-xl font-semibold text-slate-900 dark:text-slate-50">{candidate.name}</h2>
+        </div>
+        <div className="mt-3">
+          <EngineerColorPicker candidateId={candidate.id} color={candidate.color} />
+        </div>
         <Link
           href={`/candidates/${candidate.id}`}
-          className="text-xs text-indigo-600 hover:underline dark:text-indigo-400"
+          className="mt-2 inline-block text-xs font-medium text-[#0065a9] hover:underline dark:text-[#7cc4f7]"
         >
           View all processes{candidate.otherProcesses > 0 && ` (+${candidate.otherProcesses} more)`} →
         </Link>
@@ -91,15 +99,15 @@ export function DetailPanel({ detail }: { detail: ApplicationDetail }) {
       </section>
 
       {/* Profile */}
-      <details className="group rounded-lg border border-zinc-200 dark:border-zinc-800">
-        <summary className="cursor-pointer list-none p-3 text-sm font-medium text-zinc-700 marker:hidden dark:text-zinc-300">
+      <details className="group rounded-lg border border-slate-200 dark:border-slate-800">
+        <summary className="cursor-pointer list-none p-3 text-sm font-medium text-slate-700 marker:hidden dark:text-slate-300">
           <span className="mr-1 inline-block transition group-open:rotate-90">›</span>
           Edit profile
-          <span className="ml-1 font-normal text-zinc-500">
+          <span className="ml-1 font-normal text-slate-500">
             (shared by all of {candidate.name.split(" ")[0]}&apos;s processes)
           </span>
         </summary>
-        <div className="border-t border-zinc-200 p-3 dark:border-zinc-800">
+        <div className="border-t border-slate-200 p-3 dark:border-slate-800">
           <ProfileForm candidate={candidate} />
         </div>
       </details>
@@ -107,17 +115,17 @@ export function DetailPanel({ detail }: { detail: ApplicationDetail }) {
       {/* Activity */}
       <section className="space-y-2">
         <SectionTitle>Activity</SectionTitle>
-        <ol className="space-y-2 border-l border-zinc-200 pl-4 dark:border-zinc-800">
+        <ol className="space-y-2 border-l border-slate-200 pl-4 dark:border-slate-800">
           {detail.activities.map((a) => (
-            <li key={a.id} className="relative text-sm text-zinc-600 dark:text-zinc-400">
-              <span className="absolute top-1.5 -left-[1.3rem] size-2 rounded-full bg-zinc-300 dark:bg-zinc-700" />
+            <li key={a.id} className="relative text-sm text-slate-600 dark:text-slate-400">
+              <span className="absolute top-1.5 -left-[1.3rem] size-2 rounded-full bg-slate-300 dark:bg-slate-700" />
               <p>
                 {describe(a)}
                 {a.profileLevel && a.type !== "candidate_created" && (
-                  <span className="ml-1 rounded bg-zinc-100 px-1 text-[10px] uppercase text-zinc-500 dark:bg-zinc-800">profile</span>
+                  <span className="ml-1 rounded bg-slate-100 px-1 text-[10px] uppercase text-slate-500 dark:bg-slate-800">profile</span>
                 )}
               </p>
-              <p className="text-xs text-zinc-500">
+              <p className="text-xs text-slate-500">
                 <LocalTime iso={a.createdAt} />
               </p>
             </li>
@@ -126,7 +134,7 @@ export function DetailPanel({ detail }: { detail: ApplicationDetail }) {
       </section>
 
       {/* Removing */}
-      <section className="flex flex-wrap items-center justify-between gap-3 border-t border-zinc-200 pt-4 dark:border-zinc-800">
+      <section className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 pt-4 dark:border-slate-800">
         <DeleteApplicationButton applicationId={detail.id} what={`${candidate.name} at ${detail.company.name}`} redirectTo="/" />
         <ArchiveCandidateButton candidateId={candidate.id} name={candidate.name} redirectTo="/" />
       </section>

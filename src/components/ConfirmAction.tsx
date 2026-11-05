@@ -5,9 +5,9 @@ import { useState, useTransition } from "react";
 import { Modal, secondaryButtonClass } from "./Modal";
 
 const tones = {
-  danger: "rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-50",
+  danger: "inline-flex items-center rounded-xl bg-gradient-to-br from-rose-500 to-red-600 px-4 py-2 text-sm font-medium text-white shadow-md shadow-red-500/25 hover:brightness-110 disabled:opacity-50",
   neutral:
-    "rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-700 disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900",
+    "btn-primary",
 };
 
 /**
@@ -45,7 +45,7 @@ export function ConfirmAction({
         {label}
       </button>
       <Modal open={open} onClose={() => setOpen(false)} title={title}>
-        <div className="space-y-4 text-sm text-zinc-700 dark:text-zinc-300">
+        <div className="space-y-4 text-sm text-slate-700 dark:text-slate-300">
           <div>{message}</div>
           {error && <p role="alert" className="text-red-600 dark:text-red-400">{error}</p>}
           <div className="flex justify-end gap-2">
