@@ -62,7 +62,7 @@ So the model changes:
 
 ---
 
-## Phase 2 — Pipeline Board v1  🟨 current
+## Phase 2 — Pipeline Board v1  ✅ done
 *(PLAN.md Phase 1, with the application model)*
 
 ### 2.1 Database + schema ✅
@@ -91,10 +91,19 @@ So the model changes:
 - Notes: edit and delete individual notes; note count on cards.
 - **Companies** page: list, add, edit (website, notes), delete when empty; company page shows its engineers' processes.
 
-### 2.5 Custom stages/labels, search, filters, archive ⬜
+### 2.5 Custom stages/labels, search, filters, archive ✅
 - **Build:** Manage stages and labels; search by name / skill / company; filter by label, role, company; collapse final columns; archive.
 - **Test:** Run the v1 acceptance criteria (PLAN.md §2, read with "application" for "profile").
 - **Done when:** all of them pass with the fake data.
+
+### v1 acceptance criteria (PLAN.md §2, application model)
+- ✅ Add an engineer with only a name; adding a process puts a card in New immediately
+- ✅ Drag a card to another column; it stays there after refresh (also into empty / collapsed columns, and while filtered)
+- ✅ Create a custom column and a custom label and use them right away
+- ✅ Add a note; it shows with its timestamp and the stage at that moment
+- ✅ Every stage and label change appears in the card's activity history
+- ✅ Filter the board to cards with a given label (plus search by name / skill / company / role, filter by company)
+- 🟨 Every PR runs lint, type check and build in GitHub Actions before merge; **automated tests in CI come in Phase 3**
 
 ---
 

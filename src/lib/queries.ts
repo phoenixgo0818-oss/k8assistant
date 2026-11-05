@@ -23,7 +23,7 @@ export type ApplicationCard = {
   role: string;
   rank: string;
   stageId: string;
-  candidate: { id: string; name: string; headline: string | null; color: string };
+  candidate: { id: string; name: string; headline: string | null; color: string; skills: string[] };
   company: { id: string; name: string };
   labels: Label[];
   noteCount: number;
@@ -35,7 +35,7 @@ export type BoardColumn = Stage & { cards: ApplicationCard[] };
 // Supabase follows foreign keys: `candidate:candidates(...)` = join + rename.
 const APPLICATION_SELECT = `
   id, role, rank, stage_id,
-  candidate:candidates!inner ( id, name, headline, color, archived_at ),
+  candidate:candidates!inner ( id, name, headline, color, skills, archived_at ),
   company:companies ( id, name ),
   application_labels ( label:labels ( id, name, color ) ),
   application_notes ( count )
@@ -46,7 +46,7 @@ type ApplicationRow = {
   role: string;
   rank: string;
   stage_id: string;
-  candidate: { id: string; name: string; headline: string | null; color: string };
+  candidate: { id: string; name: string; headline: string | null; color: string; skills: string[] };
   company: { id: string; name: string };
   application_labels: { label: Label }[];
   application_notes: { count: number }[];
@@ -63,6 +63,7 @@ function toCard(row: ApplicationRow): ApplicationCard {
       name: row.candidate.name,
       headline: row.candidate.headline,
       color: row.candidate.color,
+      skills: row.candidate.skills,
     },
     company: row.company,
     labels: row.application_labels
@@ -251,22 +252,25 @@ export type FormOptions = {
   candidates: { id: string; name: string }[];
   companies: string[];
   stages: { id: string; name: string }[];
+  labels: Label[];
 };
 
 export async function getFormOptions(): Promise<FormOptions> {
   await connection();
   const supabase = db();
-  const [cands, comps, stages] = await Promise.all([
+  const [cands, comps, stages, labels] = await Promise.all([
     supabase.from("candidates").select("id, name").eq("workspace_id", DEFAULT_WORKSPACE_ID).is("archived_at", null).order("name"),
     supabase.from("companies").select("name").eq("workspace_id", DEFAULT_WORKSPACE_ID).order("name"),
     supabase.from("stages").select("id, name").eq("workspace_id", DEFAULT_WORKSPACE_ID).order("sort_order"),
+    supabase.from("labels").select("id, name, color").eq("workspace_id", DEFAULT_WORKSPACE_ID).order("name"),
   ]);
-  for (const r of [cands, comps, stages]) if (r.error) throw new Error(`Loading form options failed: ${r.error.message}`);
+  for (const r of [cands, comps, stages, labels]) if (r.error) throw new Error(`Loading form options failed: ${r.error.message}`);
 
   return {
     candidates: cands.data!,
     companies: comps.data!.map((c) => c.name),
     stages: stages.data!,
+    labels: labels.data!,
   };
 }
 
