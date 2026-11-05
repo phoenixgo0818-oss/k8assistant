@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, useCallback, useMemo, useRef, useState, useTransition } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore, useTransition } from "react";
 import {
   DndContext,
   DragOverlay,
@@ -29,9 +29,10 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { moveApplication } from "@/app/actions";
-import type { ApplicationCard as Card, BoardColumn } from "@/lib/queries";
+import type { ApplicationCard as Card, BoardColumn, Label } from "@/lib/queries";
 import { ApplicationCard } from "./ApplicationCard";
-import { AddColumnTile, RemoveColumnButton } from "./BoardColumnTools";
+import { AddColumnTile, ColumnSettingsButton } from "./BoardColumnTools";
+import { FilterBar, NO_FILTERS, isFiltering, matches, type Filters } from "./BoardFilters";
 import { StageDot } from "./LabelChip";
 import { PanelPreview } from "./panel/PanelPreview";
 
@@ -60,6 +61,40 @@ function dropTargetFor(columns: Columns, active: Active, over: Over): DropTarget
   return { columnId: column.id, index: index + (below ? 1 : 0) };
 }
 
+// ---------------------------------------------------------------------------
+// Collapsed columns: remembered in this browser (localStorage). Read through
+// useSyncExternalStore so server and first client render agree (no flicker or
+// hydration mismatch), then the saved state applies.
+// ---------------------------------------------------------------------------
+const COLLAPSED_KEY = "k8.collapsedColumns";
+const collapsedListeners = new Set<() => void>();
+function readCollapsed(): string {
+  try {
+    return localStorage.getItem(COLLAPSED_KEY) ?? "[]";
+  } catch {
+    return "[]";
+  }
+}
+function subscribeCollapsed(cb: () => void) {
+  collapsedListeners.add(cb);
+  window.addEventListener("storage", cb);
+  return () => {
+    collapsedListeners.delete(cb);
+    window.removeEventListener("storage", cb);
+  };
+}
+function toggleCollapsed(id: string) {
+  const ids = new Set<string>(JSON.parse(readCollapsed()));
+  if (ids.has(id)) ids.delete(id);
+  else ids.add(id);
+  try {
+    localStorage.setItem(COLLAPSED_KEY, JSON.stringify([...ids]));
+  } catch {
+    /* storage blocked: the toggle just won't persist */
+  }
+  collapsedListeners.forEach((cb) => cb());
+}
+
 /**
  * How the board drags:
  * - Inside one column, cards slide out of the way (sortable animation).
@@ -75,7 +110,17 @@ function dropTargetFor(columns: Columns, active: Active, over: Over): DropTarget
  * - The hover spotlight is pure CSS written into one <style> tag, so hovering
  *   never re-renders React at all.
  */
-export function Board({ columns: serverColumns, selectedId }: { columns: Columns; selectedId?: string }) {
+export function Board({
+  columns: serverColumns,
+  selectedId,
+  labels,
+  companies,
+}: {
+  columns: Columns;
+  selectedId?: string;
+  labels: Label[];
+  companies: string[];
+}) {
   // Local copy so cards move instantly while the server saves (optimistic UI).
   // When the server sends fresh data (after refresh()), adopt it.
   const [columns, setColumns] = useState(serverColumns);
@@ -84,6 +129,22 @@ export function Board({ columns: serverColumns, selectedId }: { columns: Columns
     setPrevServerColumns(serverColumns);
     setColumns(serverColumns);
   }
+
+  // --- Search & filters: the board shows `view`, a filtered copy -----------
+  // All drag logic works on `view` (what you see); the final move is applied
+  // to the full `columns`, placed between the VISIBLE neighbours.
+  const [filters, setFilters] = useState<Filters>(NO_FILTERS);
+  const filtering = isFiltering(filters);
+  const view = useMemo(
+    () => (filtering ? columns.map((c) => ({ ...c, cards: c.cards.filter((card) => matches(card, filters)) })) : columns),
+    [columns, filters, filtering],
+  );
+  const total = columns.reduce((n, c) => n + c.cards.length, 0);
+  const shown = view.reduce((n, c) => n + c.cards.length, 0);
+
+  // --- Collapsed columns ----------------------------------------------------
+  const collapsedJson = useSyncExternalStore(subscribeCollapsed, readCollapsed, () => "[]");
+  const collapsed = useMemo(() => new Set<string>(JSON.parse(collapsedJson)), [collapsedJson]);
 
   const [activeCard, setActiveCard] = useState<Card | null>(null);
   const [dropTarget, setDropTarget] = useState<DropTarget | null>(null); // only for OTHER columns
@@ -99,12 +160,24 @@ export function Board({ columns: serverColumns, selectedId }: { columns: Columns
 
   // --- Hover spotlight, without React re-renders ----------------------------
   const spotlight = useRef<HTMLStyleElement>(null);
+  const spotlitId = useRef<string | null>(null);
   const onSpotlight = useCallback((candidateId: string | null) => {
+    spotlitId.current = candidateId;
     if (!spotlight.current) return;
     spotlight.current.textContent = candidateId
       ? `[data-engineer]:not([data-engineer="${candidateId}"]){opacity:.32;filter:saturate(.4)}`
       : "";
   }, []);
+
+  // A card that disappears (filtered out, column collapsed) never gets a
+  // "pointer left" event, so the spotlight would stay stuck on. Clear it when
+  // the spotlit engineer's card unmounts.
+  const onCardUnmount = useCallback(
+    (candidateId: string) => {
+      if (spotlitId.current === candidateId) onSpotlight(null);
+    },
+    [onSpotlight],
+  );
 
   // Column names for the "move cards to…" choice when removing a column.
   // Recomputed only when a column is added, removed or renamed.
@@ -127,8 +200,8 @@ export function Board({ columns: serverColumns, selectedId }: { columns: Columns
       const overId = getFirstCollision(hits, "id");
       if (overId == null) return [];
 
-      const column = columns.find((c) => c.id === overId);
-      if (column && column.cards.length > 0) {
+      const column = view.find((c) => c.id === overId);
+      if (column && column.cards.length > 0 && !collapsed.has(column.id)) {
         const cardIds = new Set(column.cards.map((c) => c.id));
         const nearest = closestCenter({
           ...args,
@@ -138,7 +211,7 @@ export function Board({ columns: serverColumns, selectedId }: { columns: Columns
       }
       return [{ id: overId }];
     },
-    [columns],
+    [view, collapsed],
   );
 
   const sensors = useSensors(
@@ -153,14 +226,14 @@ export function Board({ columns: serverColumns, selectedId }: { columns: Columns
 
   function onDragStart({ active }: DragStartEvent) {
     onSpotlight(null);
-    const ci = findColumnIndex(columns, String(active.id));
-    setActiveCard(columns[ci]?.cards.find((c) => c.id === active.id) ?? null);
+    const ci = findColumnIndex(view, String(active.id));
+    setActiveCard(view[ci]?.cards.find((c) => c.id === active.id) ?? null);
     setError(null);
   }
 
   function onDragOver({ active, over }: DragOverEvent) {
-    const fromColumn = columns[findColumnIndex(columns, String(active.id))];
-    const target = over ? dropTargetFor(columns, active, over) : null;
+    const fromColumn = view[findColumnIndex(view, String(active.id))];
+    const target = over ? dropTargetFor(view, active, over) : null;
     const next = target && target.columnId !== fromColumn?.id ? target : null;
     // Only update when it actually changed, so re-renders stay minimal
     setDropTarget((prev) => (prev?.columnId === next?.columnId && prev?.index === next?.index ? prev : next));
@@ -177,44 +250,49 @@ export function Board({ columns: serverColumns, selectedId }: { columns: Columns
     if (!over) return;
 
     const activeId = String(active.id);
-    const from = findColumnIndex(columns, activeId);
-    const target = dropTargetFor(columns, active, over);
+    const from = findColumnIndex(view, activeId);
+    const target = dropTargetFor(view, active, over);
     if (from < 0 || !target) return;
-    const to = columns.findIndex((c) => c.id === target.columnId);
-    const fromIndex = columns[from].cards.findIndex((c) => c.id === activeId);
+    const to = view.findIndex((c) => c.id === target.columnId);
+    const fromIndex = view[from].cards.findIndex((c) => c.id === activeId);
+    const card = view[from].cards[fromIndex];
 
-    let next: Columns;
+    // 1. The new order of the VISIBLE cards in the target column
+    let visible: Card[];
     if (from === to) {
       // Same column: the sortable preview already shows the new order
-      const overIndex = columns[to].cards.findIndex((c) => c.id === over.id);
+      const overIndex = view[to].cards.findIndex((c) => c.id === over.id);
       if (overIndex < 0 || overIndex === fromIndex) return; // nothing changed
-      next = columns.map((c, i) => (i === to ? { ...c, cards: arrayMove(c.cards, fromIndex, overIndex) } : c));
+      visible = arrayMove(view[to].cards, fromIndex, overIndex);
     } else {
-      // Other column: take it out, put it in at the drop line.
-      // Only the two affected columns get new objects (memo skips the rest).
-      const card = columns[from].cards[fromIndex];
-      next = columns.map((c, i) => {
-        if (i === from) return { ...c, cards: c.cards.filter((x) => x.id !== activeId) };
-        if (i === to) {
-          const cards = [...c.cards];
-          cards.splice(target.index, 0, { ...card, stageId: c.id });
-          return { ...c, cards };
-        }
-        return c;
-      });
+      visible = [...view[to].cards];
+      visible.splice(target.index, 0, card);
     }
-    setColumns(next);
+    const index = visible.findIndex((c) => c.id === activeId);
+    const prevId = visible[index - 1]?.id ?? null;
+    const nextId = visible[index + 1]?.id ?? null;
 
-    const cards = next[to].cards;
-    const index = cards.findIndex((c) => c.id === activeId);
+    // 2. Apply to the FULL board: put the card right before its visible
+    //    "next" neighbour (or after "prev", or at the end). Hidden cards keep
+    //    their places. Only the two affected columns get new objects.
+    const stageId = view[to].id;
+    const moved = { ...card, stageId };
+    setColumns((prev) =>
+      prev.map((c) => {
+        const isSource = c.id === view[from].id;
+        const isTarget = c.id === stageId;
+        if (!isSource && !isTarget) return c;
+        const cards = c.cards.filter((x) => x.id !== activeId);
+        if (!isTarget) return { ...c, cards };
+        const at = nextId ? cards.findIndex((x) => x.id === nextId) : prevId ? cards.findIndex((x) => x.id === prevId) + 1 : cards.length;
+        cards.splice(at < 0 ? cards.length : at, 0, moved);
+        return { ...c, cards };
+      }),
+    );
+
     // Tell the server: "put this card between these two neighbours"
     startTransition(async () => {
-      const result = await moveApplication({
-        applicationId: activeId,
-        stageId: next[to].id,
-        prevId: cards[index - 1]?.id ?? null,
-        nextId: cards[index + 1]?.id ?? null,
-      });
+      const result = await moveApplication({ applicationId: activeId, stageId, prevId, nextId });
       if (!result.ok) setError("Couldn't save that move. The board was reset.");
     });
   }
@@ -222,6 +300,7 @@ export function Board({ columns: serverColumns, selectedId }: { columns: Columns
   return (
     <>
       <style ref={spotlight} />
+      <FilterBar filters={filters} onChange={setFilters} labels={labels} companies={companies} shown={shown} total={total} />
       {error && (
         <p role="alert" className="mx-4 mb-2 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700 sm:mx-6 dark:bg-red-950/50 dark:text-red-300">
           {error}
@@ -240,11 +319,18 @@ export function Board({ columns: serverColumns, selectedId }: { columns: Columns
             text) are only clipped by a scroll container that is positioned.
             Without it they escaped and stretched the whole page sideways.
             --col-w: one place to change the column width. */}
-        <div className="relative flex flex-1 gap-2 overflow-x-auto px-4 pb-6 [--col-w:10.5rem] sm:px-6">
-          {columns.map((column) => (
+        <div
+          className="relative flex flex-1 gap-2 overflow-x-auto px-4 pb-6 [--col-w:10.5rem] sm:px-6"
+          onPointerLeave={() => onSpotlight(null)}
+        >
+          {view.map((column, i) => (
             <Column
               key={column.id}
               column={column}
+              totalCount={filtering ? columns[i].cards.length : null}
+              isFirst={i === 0}
+              isLast={i === view.length - 1}
+              collapsed={collapsed.has(column.id)}
               columnList={columnList}
               lastDragEnd={lastDragEnd}
               // pass the selection only to the column that holds it, so the
@@ -252,6 +338,7 @@ export function Board({ columns: serverColumns, selectedId }: { columns: Columns
               selectedId={column.cards.some((c) => c.id === selectedId) ? selectedId : undefined}
               dropIndex={dropTarget?.columnId === column.id ? dropTarget.index : null}
               onSpotlight={onSpotlight}
+              onCardUnmount={onCardUnmount}
               onOpen={onOpen}
             />
           ))}
@@ -273,20 +360,31 @@ export function Board({ columns: serverColumns, selectedId }: { columns: Columns
 
 const Column = memo(function Column({
   column,
+  totalCount,
+  isFirst,
+  isLast,
+  collapsed,
   columnList,
   lastDragEnd,
   selectedId,
   dropIndex,
   onSpotlight,
+  onCardUnmount,
   onOpen,
 }: {
   column: BoardColumn;
+  /** While filtering: how many cards the column has in total (else null) */
+  totalCount: number | null;
+  isFirst: boolean;
+  isLast: boolean;
+  collapsed: boolean;
   columnList: { id: string; name: string }[];
   lastDragEnd: React.RefObject<number>;
   selectedId?: string;
   /** Where a card from another column would land (null = not targeted) */
   dropIndex: number | null;
   onSpotlight: (candidateId: string | null) => void;
+  onCardUnmount: (candidateId: string) => void;
   onOpen: (card: Card) => void;
 }) {
   // The column itself is a drop target, so empty columns accept cards too
@@ -294,10 +392,45 @@ const Column = memo(function Column({
   const targeted = dropIndex !== null;
   const otherColumns = useMemo(() => columnList.filter((c) => c.id !== column.id), [columnList, column.id]);
   const itemIds = useMemo(() => column.cards.map((c) => c.id), [column.cards]);
+  const count = totalCount === null ? `${column.cards.length}` : `${column.cards.length}/${totalCount}`;
+  const settings = (
+    <ColumnSettingsButton
+      column={{ id: column.id, name: column.name, color: column.color, isFinal: column.isFinal, cardCount: totalCount ?? column.cards.length }}
+      otherColumns={otherColumns}
+      isFirst={isFirst}
+      isLast={isLast}
+      collapsed={collapsed}
+      onToggleCollapse={() => toggleCollapsed(column.id)}
+    />
+  );
+
+  // Collapsed: a slim strip that still accepts dropped cards (they go to the bottom)
+  if (collapsed) {
+    return (
+      <section
+        ref={setNodeRef}
+        aria-label={`${column.name}, ${count} cards, collapsed`}
+        className={`group/col glass relative flex w-10 shrink-0 flex-col items-center gap-2 rounded-2xl py-2 ${targeted ? "ring-2 ring-white/90 !bg-white/30" : ""}`}
+      >
+        <button
+          type="button"
+          onClick={() => toggleCollapsed(column.id)}
+          title={`Expand ${column.name}`}
+          aria-label={`Expand ${column.name}`}
+          className="flex flex-1 flex-col items-center gap-2 text-white"
+        >
+          <StageDot color={column.color} />
+          <span className="rounded-full bg-white/25 px-1.5 text-[11px] font-semibold ring-1 ring-white/30">{count}</span>
+          <span className="text-[13px] font-semibold [text-shadow:0_1px_2px_rgb(0_32_64/0.35)] [writing-mode:vertical-rl]">{column.name}</span>
+        </button>
+        <span className="absolute bottom-1">{settings}</span>
+      </section>
+    );
+  }
 
   return (
     <section
-      aria-label={`${column.name}, ${column.cards.length} cards`}
+      aria-label={`${column.name}, ${count} cards`}
       className={`group/col glass flex w-[var(--col-w)] shrink-0 flex-col rounded-2xl p-1.5 ${
         targeted ? "ring-2 ring-white/90 !bg-white/30 dark:!bg-white/15" : column.isFinal ? "opacity-90" : ""
       }`}
@@ -309,11 +442,11 @@ const Column = memo(function Column({
           {column.name}
         </h2>
         <span className="rounded-full bg-white/25 px-1.5 text-[11px] font-semibold text-white ring-1 ring-white/30">
-          {column.cards.length}
+          {count}
         </span>
         {/* "⋯" sits over the count and only shows on hover / keyboard focus */}
         <span className="absolute top-0.5 right-1">
-          <RemoveColumnButton column={{ id: column.id, name: column.name, cardCount: column.cards.length }} otherColumns={otherColumns} />
+          {settings}
         </span>
       </header>
 
@@ -328,6 +461,7 @@ const Column = memo(function Column({
               // Drop line drawn with a shadow, so it never changes the layout
               dropLine={dropIndex === i ? "before" : dropIndex === column.cards.length && i === column.cards.length - 1 ? "after" : null}
               onSpotlight={onSpotlight}
+              onUnmount={onCardUnmount}
               onOpen={onOpen}
             />
           ))}
@@ -352,6 +486,7 @@ const SortableCard = memo(function SortableCard({
   selected,
   dropLine,
   onSpotlight,
+  onUnmount,
   onOpen,
 }: {
   card: Card;
@@ -359,8 +494,11 @@ const SortableCard = memo(function SortableCard({
   selected: boolean;
   dropLine: "before" | "after" | null;
   onSpotlight: (candidateId: string | null) => void;
+  onUnmount: (candidateId: string) => void;
   onOpen: (card: Card) => void;
 }) {
+  const candidateId = card.candidate.id;
+  useEffect(() => () => onUnmount(candidateId), [candidateId, onUnmount]);
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: card.id });
 
   return (

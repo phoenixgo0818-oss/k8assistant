@@ -472,6 +472,10 @@ export type Database = {
         Args: { p_application_id: string; p_workspace_id: string }
         Returns: undefined
       }
+      delete_label: {
+        Args: { p_label_id: string; p_workspace_id: string }
+        Returns: number
+      }
       delete_stage: {
         Args: {
           p_application_ids: string[]
@@ -491,6 +495,14 @@ export type Database = {
         Args: {
           p_application_id: string
           p_rank: string
+          p_stage_id: string
+          p_workspace_id: string
+        }
+        Returns: undefined
+      }
+      move_stage: {
+        Args: {
+          p_direction: number
           p_stage_id: string
           p_workspace_id: string
         }

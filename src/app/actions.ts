@@ -603,3 +603,93 @@ export async function deleteStage(input: { stageId: string; targetStageId: strin
   refresh();
   return { ok: true };
 }
+
+// ---------------------------------------------------------------------------
+// Step 2.5: edit / reorder columns, edit / delete labels
+// ---------------------------------------------------------------------------
+const checkbox = z
+  .string()
+  .optional()
+  .transform((v) => v === "on");
+
+export async function updateStage(_prev: FormState, formData: FormData): Promise<FormState> {
+  const parsed = z
+    .object({
+      stageId: uuid,
+      name: z.string().trim().min(1, "Name is required").max(40),
+      color: z.enum(LABEL_COLORS).catch("#64748b"),
+      isFinal: checkbox,
+    })
+    .safeParse(formValues(formData));
+  if (!parsed.success) return invalid(parsed.error);
+  const v = parsed.data;
+
+  const { error } = await db()
+    .from("stages")
+    .update({ name: v.name, color: v.color, is_final: v.isFinal })
+    .eq("workspace_id", DEFAULT_WORKSPACE_ID)
+    .eq("id", v.stageId);
+  if (error) {
+    if (error.code === DUPLICATE) return { ok: false, fieldErrors: { name: ["A column with this name already exists"] } };
+    console.error("updateStage failed", error);
+    return { ok: false, message: "Couldn't save the column." };
+  }
+  refresh();
+  return { ok: true, submittedAt: Date.now() };
+}
+
+export async function moveStage(input: { stageId: string; direction: -1 | 1 }): Promise<{ ok: boolean }> {
+  const parsed = z.object({ stageId: uuid, direction: z.union([z.literal(-1), z.literal(1)]) }).safeParse(input);
+  if (!parsed.success) return { ok: false };
+  const { error } = await db().rpc("move_stage", {
+    p_workspace_id: DEFAULT_WORKSPACE_ID,
+    p_stage_id: parsed.data.stageId,
+    p_direction: parsed.data.direction,
+  });
+  if (error) {
+    console.error("moveStage failed", error);
+    return { ok: false };
+  }
+  refresh();
+  return { ok: true };
+}
+
+export async function updateLabel(_prev: FormState, formData: FormData): Promise<FormState> {
+  const parsed = z
+    .object({
+      labelId: uuid,
+      name: z.string().trim().min(1, "Name is required").max(40),
+      color: z.enum(LABEL_COLORS).catch("#64748b"),
+    })
+    .safeParse(formValues(formData));
+  if (!parsed.success) return invalid(parsed.error);
+
+  const { error } = await db()
+    .from("labels")
+    .update({ name: parsed.data.name, color: parsed.data.color })
+    .eq("workspace_id", DEFAULT_WORKSPACE_ID)
+    .eq("id", parsed.data.labelId);
+  if (error) {
+    if (error.code === DUPLICATE) return { ok: false, fieldErrors: { name: ["A label with this name already exists"] } };
+    console.error("updateLabel failed", error);
+    return { ok: false, message: "Couldn't save the label." };
+  }
+  refresh();
+  return { ok: true, submittedAt: Date.now() };
+}
+
+/** Removes the label from every card (each gets a history entry), then deletes it. */
+export async function deleteLabel(input: { labelId: string }): Promise<{ ok: boolean; message?: string }> {
+  const parsed = z.object({ labelId: uuid }).safeParse(input);
+  if (!parsed.success) return { ok: false };
+  const { error } = await db().rpc("delete_label", {
+    p_workspace_id: DEFAULT_WORKSPACE_ID,
+    p_label_id: parsed.data.labelId,
+  });
+  if (error) {
+    console.error("deleteLabel failed", error);
+    return { ok: false, message: "Couldn't delete the label." };
+  }
+  refresh();
+  return { ok: true };
+}
