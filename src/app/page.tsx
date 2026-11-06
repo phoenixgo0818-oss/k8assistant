@@ -27,7 +27,7 @@ export default async function BoardPage(props: PageProps<"/">) {
         </div>
       </div>
 
-      <Board columns={columns} selectedId={cardId} />
+      <Board columns={columns} selectedId={cardId} labels={options.labels} companies={options.companies} />
 
       {/* The panel streams in separately: the board never waits for it.
           Meanwhile the board shows an instant preview (PanelPreview). */}
