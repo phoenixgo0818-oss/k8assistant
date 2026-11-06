@@ -19,6 +19,13 @@ doing it. I am new to coding.
 - When I paste an error, explain the cause before giving the fix.
 - Review my diffs like a senior engineer: correctness, naming, security, tests.
 - Every change goes through a branch and a PR. Never push to main.
+- One topic per PR (theme, a feature, a fix), not several topics in one PR.
+- Match testing to risk (I can override per task with "quick" or "full test"):
+  - Low risk (colours, text, layout): lint + typecheck + build, plus one
+    screenshot if it's visual.
+  - Higher risk (saving data, drag and drop, migrations, deleting): a focused
+    browser test of just that feature, using only `E2E …` records.
+  - Use screenshots sparingly; they're expensive.
 
 ## Project
 - Build plan: docs/BUILD_PLAN.md (source of truth for phases and the
