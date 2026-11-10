@@ -3,11 +3,14 @@
 // Server Actions: functions that run on the server but can be called from
 // forms and buttons in the browser. Next.js turns each export into an HTTP
 // endpoint, so treat every argument as untrusted input and validate it.
+// Being public endpoints, each one also starts with requireUser(): proxy.ts
+// alone isn't enough, because anyone can POST to an action directly.
 
 import { refresh } from "next/cache";
 import { generateKeyBetween, generateNKeysBetween } from "fractional-indexing";
 import { z } from "zod";
 import { db, DEFAULT_WORKSPACE_ID } from "@/lib/supabase";
+import { requireUser } from "@/lib/auth";
 import { ENGINEER_COLORS, LABEL_COLORS } from "@/lib/constants";
 
 export type FormState = {
@@ -115,6 +118,7 @@ async function insertApplication(input: {
 }
 
 export async function createCandidate(_prev: FormState, formData: FormData): Promise<FormState> {
+  await requireUser();
   const parsed = candidateSchema.safeParse(formValues(formData));
   if (!parsed.success) return invalid(parsed.error);
   const v = parsed.data;
@@ -152,6 +156,7 @@ export async function createCandidate(_prev: FormState, formData: FormData): Pro
 }
 
 export async function createApplication(_prev: FormState, formData: FormData): Promise<FormState> {
+  await requireUser();
   const parsed = applicationSchema.safeParse(formValues(formData));
   if (!parsed.success) return invalid(parsed.error);
 
@@ -170,6 +175,7 @@ export async function createApplication(_prev: FormState, formData: FormData): P
 // Move (drag and drop)
 // ---------------------------------------------------------------------------
 export async function moveApplication(input: z.input<typeof moveSchema>): Promise<{ ok: boolean }> {
+  await requireUser();
   const parsed = moveSchema.safeParse(input);
   if (!parsed.success) return { ok: false };
   const { applicationId, stageId, prevId, nextId } = parsed.data;
@@ -217,6 +223,7 @@ export async function moveApplication(input: z.input<typeof moveSchema>): Promis
 
 /** Stage dropdown: same as dragging the card to the bottom of that column */
 export async function changeStage(input: { applicationId: string; stageId: string }): Promise<{ ok: boolean }> {
+  await requireUser();
   const parsed = z.object({ applicationId: uuid, stageId: uuid }).safeParse(input);
   if (!parsed.success) return { ok: false };
 
@@ -237,6 +244,7 @@ export async function changeStage(input: { applicationId: string; stageId: strin
 }
 
 export async function setLabel(input: { applicationId: string; labelId: string; on: boolean }): Promise<{ ok: boolean }> {
+  await requireUser();
   const parsed = z.object({ applicationId: uuid, labelId: uuid, on: z.boolean() }).safeParse(input);
   if (!parsed.success) return { ok: false };
 
@@ -256,6 +264,7 @@ export async function setLabel(input: { applicationId: string; labelId: string; 
 
 /** Create a new label (or reuse one with the same name) and put it on this card */
 export async function createLabelOnCard(_prev: FormState, formData: FormData): Promise<FormState> {
+  await requireUser();
   const parsed = z
     .object({
       applicationId: uuid,
@@ -288,6 +297,7 @@ export async function createLabelOnCard(_prev: FormState, formData: FormData): P
 }
 
 export async function addNote(_prev: FormState, formData: FormData): Promise<FormState> {
+  await requireUser();
   const parsed = z
     .object({ applicationId: uuid, body: z.string().trim().min(1, "Write something first").max(5000) })
     .safeParse(formValues(formData));
@@ -333,6 +343,7 @@ const profileSchema = z.object({
 });
 
 export async function updateProfile(_prev: FormState, formData: FormData): Promise<FormState> {
+  await requireUser();
   const parsed = profileSchema.safeParse(formValues(formData));
   if (!parsed.success) return invalid(parsed.error);
   const v = parsed.data;
@@ -364,6 +375,7 @@ export async function updateProfile(_prev: FormState, formData: FormData): Promi
 
 /** Archive = hide from the board and lists, keep everything. Reversible. */
 export async function setCandidateArchived(input: { candidateId: string; archived: boolean }): Promise<{ ok: boolean }> {
+  await requireUser();
   const parsed = z.object({ candidateId: uuid, archived: z.boolean() }).safeParse(input);
   if (!parsed.success) return { ok: false };
   const { error } = await db().rpc("set_candidate_archived", {
@@ -381,6 +393,7 @@ export async function setCandidateArchived(input: { candidateId: string; archive
 
 /** Permanent: the engineer, all their processes, notes and history are gone. */
 export async function deleteCandidate(input: { candidateId: string }): Promise<{ ok: boolean }> {
+  await requireUser();
   const parsed = z.object({ candidateId: uuid }).safeParse(input);
   if (!parsed.success) return { ok: false };
   const { error } = await db()
@@ -398,6 +411,7 @@ export async function deleteCandidate(input: { candidateId: string }): Promise<{
 
 /** Permanent: one process (card) with its notes, labels and card history. */
 export async function deleteApplication(input: { applicationId: string }): Promise<{ ok: boolean }> {
+  await requireUser();
   const parsed = z.object({ applicationId: uuid }).safeParse(input);
   if (!parsed.success) return { ok: false };
   const { error } = await db().rpc("delete_application", {
@@ -416,6 +430,7 @@ export async function deleteApplication(input: { applicationId: string }): Promi
 // Editing and deleting individual notes
 // ---------------------------------------------------------------------------
 export async function updateNote(_prev: FormState, formData: FormData): Promise<FormState> {
+  await requireUser();
   const parsed = z
     .object({ noteId: uuid, body: z.string().trim().min(1, "A note can't be empty").max(5000) })
     .safeParse(formValues(formData));
@@ -435,6 +450,7 @@ export async function updateNote(_prev: FormState, formData: FormData): Promise<
 }
 
 export async function deleteNote(input: { noteId: string }): Promise<{ ok: boolean }> {
+  await requireUser();
   const parsed = z.object({ noteId: uuid }).safeParse(input);
   if (!parsed.success) return { ok: false };
   const { error } = await db()
@@ -470,6 +486,7 @@ const companySchema = z.object({
 const DUPLICATE = "23505"; // Postgres error code: unique constraint violated
 
 export async function createCompany(_prev: FormState, formData: FormData): Promise<FormState> {
+  await requireUser();
   const parsed = companySchema.safeParse(formValues(formData));
   if (!parsed.success) return invalid(parsed.error);
 
@@ -486,6 +503,7 @@ export async function createCompany(_prev: FormState, formData: FormData): Promi
 }
 
 export async function updateCompany(_prev: FormState, formData: FormData): Promise<FormState> {
+  await requireUser();
   const parsed = companySchema.extend({ companyId: uuid }).safeParse(formValues(formData));
   if (!parsed.success) return invalid(parsed.error);
   const { companyId, ...fields } = parsed.data;
@@ -506,6 +524,7 @@ export async function updateCompany(_prev: FormState, formData: FormData): Promi
 
 /** Only companies with no processes can be deleted (the DB enforces this too). */
 export async function deleteCompany(input: { companyId: string }): Promise<{ ok: boolean; message?: string }> {
+  await requireUser();
   const parsed = z.object({ companyId: uuid }).safeParse(input);
   if (!parsed.success) return { ok: false };
   const { error } = await db()
@@ -526,6 +545,7 @@ export async function deleteCompany(input: { companyId: string }): Promise<{ ok:
 // Engineer colour
 // ---------------------------------------------------------------------------
 export async function setCandidateColor(input: { candidateId: string; color: string }): Promise<{ ok: boolean }> {
+  await requireUser();
   const parsed = z.object({ candidateId: uuid, color: z.enum(ENGINEER_COLORS) }).safeParse(input);
   if (!parsed.success) return { ok: false };
   const { error } = await db()
@@ -545,6 +565,7 @@ export async function setCandidateColor(input: { candidateId: string; color: str
 // Board columns (stages)
 // ---------------------------------------------------------------------------
 export async function createStage(_prev: FormState, formData: FormData): Promise<FormState> {
+  await requireUser();
   const parsed = z
     .object({
       name: z.string().trim().min(1, "Name is required").max(40),
@@ -569,6 +590,7 @@ export async function createStage(_prev: FormState, formData: FormData): Promise
 
 /** Remove a column; its cards (if any) go to the bottom of `targetStageId`, in order. */
 export async function deleteStage(input: { stageId: string; targetStageId: string | null }): Promise<{ ok: boolean; message?: string }> {
+  await requireUser();
   const parsed = z.object({ stageId: uuid, targetStageId: uuid.nullable() }).safeParse(input);
   if (!parsed.success) return { ok: false };
   const { stageId, targetStageId } = parsed.data;
@@ -613,6 +635,7 @@ const checkbox = z
   .transform((v) => v === "on");
 
 export async function updateStage(_prev: FormState, formData: FormData): Promise<FormState> {
+  await requireUser();
   const parsed = z
     .object({
       stageId: uuid,
@@ -639,6 +662,7 @@ export async function updateStage(_prev: FormState, formData: FormData): Promise
 }
 
 export async function moveStage(input: { stageId: string; direction: -1 | 1 }): Promise<{ ok: boolean }> {
+  await requireUser();
   const parsed = z.object({ stageId: uuid, direction: z.union([z.literal(-1), z.literal(1)]) }).safeParse(input);
   if (!parsed.success) return { ok: false };
   const { error } = await db().rpc("move_stage", {
@@ -655,6 +679,7 @@ export async function moveStage(input: { stageId: string; direction: -1 | 1 }): 
 }
 
 export async function updateLabel(_prev: FormState, formData: FormData): Promise<FormState> {
+  await requireUser();
   const parsed = z
     .object({
       labelId: uuid,
@@ -680,6 +705,7 @@ export async function updateLabel(_prev: FormState, formData: FormData): Promise
 
 /** Removes the label from every card (each gets a history entry), then deletes it. */
 export async function deleteLabel(input: { labelId: string }): Promise<{ ok: boolean; message?: string }> {
+  await requireUser();
   const parsed = z.object({ labelId: uuid }).safeParse(input);
   if (!parsed.success) return { ok: false };
   const { error } = await db().rpc("delete_label", {

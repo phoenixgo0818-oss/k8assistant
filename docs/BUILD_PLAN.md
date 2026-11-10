@@ -110,26 +110,28 @@ So the model changes:
 ## Phase 3 — To-do, Notes, Auth + Testing
 *(PLAN.md Phases 2 + 3)*
 
-### 3.1 Daily To-do ⬜
+### 3.1 Email + password sign-in ⬜
+*(moved up from 3.4: the production URL was public with no login)*
+- **Build:** Supabase Auth with email + password; accounts are created in the Supabase dashboard (public sign-up off) and must also be on the `ALLOWED_EMAILS` allowlist; `proxy.ts` refreshes the session and sends signed-out visitors to `/login`; every query and Server Action also checks the user (Data Access Layer); sign out from the header.
+- **Test:** Signed out, every page redirects to `/login`; a wrong password or an account not on the allowlist can't get in.
+- **Done when:** only allowlisted accounts can see or change the board.
+
+### 3.2 Daily To-do ⬜
 - **Build:** `todos`: Today list, due date, priority, done, carry-over of unfinished items; optional link to a candidate or application.
 - **Done when:** you plan a real day in the app.
 
-### 3.2 Notes ⬜
+### 3.3 Notes ⬜
 - **Build:** `notes` + `note_links`: Markdown, tags, pinning, links to candidates / applications / to-dos, full-text search.
 - **Done when:** you run one week of work using only the app.
 
-### 3.3 Unit tests ⬜
-- **Build:** Vitest; tests for fractional ranking, carry-over, and stage-move logic; run in CI.
-- **Done when:** breaking the ranking logic turns CI red.
+### 3.4 Unit + E2E tests, branch protection ⬜
+- **Build:** Vitest for fractional ranking, carry-over, stage-move logic and the auth rules (allowlist, safe redirects); Playwright for the core flows (sign in, add candidate, add application, drag, note); both required in CI.
+- **Done when:** breaking the ranking logic turns CI red and a failing test blocks the merge.
 
-### 3.4 Google sign-in + RLS ⬜
-- **Build:** Supabase Auth (Google), `user_profiles`, RLS on every table.
-- **Test:** A second Google account sees nothing.
-- **Done when:** signed-out and other-account access is blocked.
-
-### 3.5 E2E tests + branch protection ⬜
-- **Build:** Playwright for the core flows (add candidate, add application, drag, note); required in CI.
-- **Done when:** a failing test blocks the merge.
+### 3.5 User profiles + RLS ⬜
+- **Build:** `user_profiles`, RLS on every table, data reads move from the secret key to the signed-in user's session.
+- **Test:** A second account sees nothing.
+- **Done when:** other-account access is blocked by the database itself, not just the app.
 
 ---
 
