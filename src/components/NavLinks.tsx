@@ -10,7 +10,10 @@ const NAV = [
 ];
 
 export function ActiveNav() {
-  return <NavLinks pathname={usePathname()} />;
+  const pathname = usePathname();
+  // Signed-out visitors can't open these pages, so don't offer them
+  if (pathname === "/login") return null;
+  return <NavLinks pathname={pathname} />;
 }
 
 export function NavLinks({ pathname }: { pathname: string | null }) {

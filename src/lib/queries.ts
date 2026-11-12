@@ -2,9 +2,11 @@ import "server-only";
 
 import { connection } from "next/server";
 import { db, DEFAULT_WORKSPACE_ID } from "./supabase";
+import { requireUser } from "./auth";
 
 // Every query starts with `await connection()`: it tells Next.js this data
 // belongs to the request, so it is never fetched (or frozen) at build time.
+// Then `await requireUser()`: no signed-in, allowlisted user, no data.
 
 // ---------------------------------------------------------------------------
 // Shapes the UI works with (flattened from the DB rows)
@@ -78,6 +80,7 @@ function toCard(row: ApplicationRow): ApplicationCard {
 // ---------------------------------------------------------------------------
 export async function getBoard(): Promise<BoardColumn[]> {
   await connection();
+  await requireUser();
   const supabase = db();
 
   // Two queries in parallel instead of one after the other
@@ -126,6 +129,7 @@ export type CandidateSummary = {
 
 export async function getCandidates(): Promise<CandidateSummary[]> {
   await connection();
+  await requireUser();
   const { data, error } = await db()
     .from("candidates")
     .select("id, name, headline, color, years_experience, skills, applications ( id, archived_at )")
@@ -148,6 +152,7 @@ export async function getCandidates(): Promise<CandidateSummary[]> {
 
 export async function getArchivedCandidates(): Promise<{ id: string; name: string; color: string; archivedAt: string }[]> {
   await connection();
+  await requireUser();
   const { data, error } = await db()
     .from("candidates")
     .select("id, name, color, archived_at")
@@ -182,6 +187,7 @@ const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
 export async function getCandidate(id: string): Promise<CandidateDetail | null> {
   // A malformed id would make Postgres throw; treat it as "not found" instead
   await connection();
+  await requireUser();
   if (!UUID_RE.test(id)) return null;
 
   const supabase = db();
@@ -257,6 +263,7 @@ export type FormOptions = {
 
 export async function getFormOptions(): Promise<FormOptions> {
   await connection();
+  await requireUser();
   const supabase = db();
   const [cands, comps, stages, labels] = await Promise.all([
     supabase.from("candidates").select("id, name").eq("workspace_id", DEFAULT_WORKSPACE_ID).is("archived_at", null).order("name"),
@@ -305,6 +312,7 @@ export type ApplicationDetail = {
 
 export async function getApplicationDetail(id: string): Promise<ApplicationDetail | null> {
   await connection();
+  await requireUser();
   if (!UUID_RE.test(id)) return null;
 
   const supabase = db();
@@ -406,6 +414,7 @@ export type CompanySummary = {
 
 export async function getCompanies(): Promise<CompanySummary[]> {
   await connection();
+  await requireUser();
   const { data, error } = await db()
     .from("companies")
     .select("id, name, website, applications ( candidate_id, archived_at, candidate:candidates ( archived_at ) )")
@@ -441,6 +450,7 @@ export type CompanyDetail = {
 
 export async function getCompany(id: string): Promise<CompanyDetail | null> {
   await connection();
+  await requireUser();
   if (!UUID_RE.test(id)) return null;
   const { data, error } = await db()
     .from("companies")
