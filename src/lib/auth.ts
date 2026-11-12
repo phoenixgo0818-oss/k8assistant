@@ -14,15 +14,17 @@ import { isAllowedEmail } from "./auth-rules";
  * lands in step 3.5; this client is for sign-in, sign-out and "who is this?".)
  */
 export async function createAuthClient() {
+  // connection() comes FIRST: it marks everything below as request-time work,
+  // so `next build` stops here instead of running it while prerendering.
+  // That matters twice: the build (CI, Vercel) has no secrets, so the env
+  // check below would throw; and the Supabase client reads the clock
+  // (Date.now) as soon as it's created, which prerendering forbids.
+  await connection();
   const url = process.env.SUPABASE_URL;
   const key = process.env.SUPABASE_PUBLISHABLE_KEY;
   if (!url || !key) {
     throw new Error("Missing SUPABASE_URL or SUPABASE_PUBLISHABLE_KEY (see .env.example).");
   }
-  // The Supabase client reads the clock (Date.now) as soon as it's created, to
-  // check token expiry. connection() marks this as request-time work, so Next
-  // never tries to run it while prerendering (same rule as in queries.ts).
-  await connection();
   const cookieStore = await cookies();
   return createServerClient(url, key, {
     cookies: {
