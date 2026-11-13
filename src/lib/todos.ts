@@ -1,6 +1,6 @@
-// To-do rules as pure functions: no database, no React, no "now" hidden
-// inside. "today" is always passed in, which makes them easy to unit-test
-// (step 3.4) and keeps server and browser agreeing on what day it is.
+// To-do / event rules as pure functions: no database, no React, no "now"
+// hidden inside. "today" is always passed in, which makes them easy to
+// unit-test (step 3.4) and keeps server and browser agreeing on the day.
 
 /**
  * The app's day boundary. Everyone using the app shares one "today", in this
@@ -17,7 +17,8 @@ export type IsoDate = string;
 export type Todo = {
   id: string;
   title: string;
-  dueDate: IsoDate | null; // null = Someday
+  dueDate: IsoDate;
+  dueTime: string | null; // "HH:MM"; null = any time that day
   priority: Priority;
   doneAt: string | null; // ISO timestamp
   carriedOver: number;
@@ -37,11 +38,6 @@ export function todayIn(timeZone: string = APP_TIME_ZONE, now: Date = new Date()
   return new Intl.DateTimeFormat("en-CA", { timeZone, year: "numeric", month: "2-digit", day: "2-digit" }).format(now);
 }
 
-/** The calendar day a timestamp falls on, in the app time zone. */
-export function dateOf(timestamp: string, timeZone: string = APP_TIME_ZONE): IsoDate {
-  return todayIn(timeZone, new Date(timestamp));
-}
-
 /** "2026-11-13" + 1 → "2026-11-14". Done in UTC so DST changes can't shift it. */
 export function addDays(date: IsoDate, days: number): IsoDate {
   const d = new Date(`${date}T00:00:00Z`);
@@ -54,7 +50,7 @@ export function daysBetween(from: IsoDate, to: IsoDate): number {
   return Math.round((Date.parse(`${to}T00:00:00Z`) - Date.parse(`${from}T00:00:00Z`)) / 86_400_000);
 }
 
-/** Human label for a due date: "Today", "Tomorrow", "Yesterday", "Mon 16 Nov". */
+/** Human label for a day: "Today", "Tomorrow", "Yesterday", "Mon 16 Nov". */
 export function formatDay(date: IsoDate, today: IsoDate): string {
   const diff = daysBetween(today, date);
   if (diff === 0) return "Today";
@@ -65,61 +61,42 @@ export function formatDay(date: IsoDate, today: IsoDate): string {
   );
 }
 
-// ---------------------------------------------------------------------------
-// Grouping for the Today page
-// ---------------------------------------------------------------------------
+/** Postgres returns "15:00:00"; show "15:00". */
+export function formatTime(time: string | null): string | null {
+  return time ? time.slice(0, 5) : null;
+}
 
-export type TodoSections = {
-  /** Open, from an earlier day: needs a decision (carry over, reschedule, or do it) */
-  earlier: Todo[];
-  /** Open, due today */
-  today: Todo[];
-  /** Open, due later, grouped by day (in date order) */
-  upcoming: { date: IsoDate; todos: Todo[] }[];
-  /** Open, no day planned */
-  someday: Todo[];
-  /** Finished today (older finished items aren't shown) */
-  doneToday: Todo[];
-};
+// ---------------------------------------------------------------------------
+// The board's "Upcoming" list
+// ---------------------------------------------------------------------------
 
 const PRIORITY_ORDER: Record<Priority, number> = { high: 0, normal: 1, low: 2 };
 
-/** High priority first; then the order they arrived in (stable sort). */
-export function byPriority(a: Todo, b: Todo): number {
-  return PRIORITY_ORDER[a.priority] - PRIORITY_ORDER[b.priority];
-}
-
-export function groupTodos(todos: Todo[], today: IsoDate, timeZone: string = APP_TIME_ZONE): TodoSections {
-  const s: TodoSections = { earlier: [], today: [], upcoming: [], someday: [], doneToday: [] };
-  const upcoming = new Map<IsoDate, Todo[]>();
-
-  for (const t of todos) {
-    if (t.doneAt) {
-      if (dateOf(t.doneAt, timeZone) === today) s.doneToday.push(t);
-    } else if (t.dueDate === null) s.someday.push(t);
-    else if (t.dueDate < today) s.earlier.push(t); // YYYY-MM-DD strings sort like dates
-    else if (t.dueDate === today) s.today.push(t);
-    else upcoming.set(t.dueDate, [...(upcoming.get(t.dueDate) ?? []), t]);
-  }
-
-  // Oldest first within "earlier": the longest-waiting item is the first you see
-  s.earlier.sort((a, b) => a.dueDate!.localeCompare(b.dueDate!) || byPriority(a, b));
-  s.today.sort(byPriority);
-  s.someday.sort(byPriority);
-  s.doneToday.sort((a, b) => b.doneAt!.localeCompare(a.doneAt!)); // most recent first
-  s.upcoming = [...upcoming.entries()]
-    .sort(([a], [b]) => a.localeCompare(b))
-    .map(([date, list]) => ({ date, todos: list.sort(byPriority) }));
-  return s;
-}
-
 /**
- * Turn a "when" choice from a form into a due date.
- * "today" | "tomorrow" | "someday" | an explicit "YYYY-MM-DD".
+ * Time order: by day, then all-day items first (like a calendar), then by
+ * time, then high priority first. Late items (an earlier day, still open)
+ * naturally come first, so nothing unfinished drops out of sight.
  */
-export function resolveDue(when: string, today: IsoDate): IsoDate | null {
+export function compareEvents(a: Todo, b: Todo): number {
+  return (
+    a.dueDate.localeCompare(b.dueDate) || // YYYY-MM-DD strings sort like dates
+    (a.dueTime ?? "").localeCompare(b.dueTime ?? "") || // "" (all day) sorts before "09:30"
+    PRIORITY_ORDER[a.priority] - PRIORITY_ORDER[b.priority]
+  );
+}
+
+/** Open events in time order. Finished ones leave the list. */
+export function upcomingEvents(todos: Todo[]): Todo[] {
+  return todos.filter((t) => t.doneAt === null).sort(compareEvents);
+}
+
+export function isLate(todo: Todo, today: IsoDate): boolean {
+  return todo.doneAt === null && todo.dueDate < today;
+}
+
+/** Turn a "When" choice from a form into a date: "today" | "tomorrow" | "YYYY-MM-DD". */
+export function resolveDue(when: string, today: IsoDate): IsoDate {
   if (when === "today") return today;
   if (when === "tomorrow") return addDays(today, 1);
-  if (when === "someday") return null;
   return when; // already validated as YYYY-MM-DD by the caller
 }

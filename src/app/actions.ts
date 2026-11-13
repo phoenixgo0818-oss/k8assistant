@@ -722,7 +722,7 @@ export async function deleteLabel(input: { labelId: string }): Promise<{ ok: boo
 }
 
 // ---------------------------------------------------------------------------
-// To-dos (step 3.2)
+// To-dos / events (step 3.2): shown in time order under the board
 // ---------------------------------------------------------------------------
 const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Pick a date").refine((d) => !Number.isNaN(Date.parse(d)), "Not a real date");
 
@@ -730,8 +730,14 @@ const todoSchema = z
   .object({
     title: z.string().trim().min(1, "What needs doing?").max(200),
     // The "When" picker: a shortcut, or "date" + the date input
-    due: z.enum(["today", "tomorrow", "someday", "date"]),
+    due: z.enum(["today", "tomorrow", "date"]),
     dueDate: z.string().optional(),
+    // Optional time of day; empty = any time that day
+    dueTime: z
+      .string()
+      .optional()
+      .transform((v) => v || null)
+      .pipe(z.union([z.null(), z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, "Not a valid time")])),
     priority: z.enum(PRIORITIES),
     // "" | "candidate:<uuid>" | "application:<uuid>"
     link: z
@@ -752,6 +758,7 @@ function todoColumns(v: z.output<typeof todoSchema>) {
   return {
     title: v.title,
     due_date: resolveDue(v.due === "date" ? v.dueDate! : v.due, todayIn()),
+    due_time: v.dueTime,
     priority: v.priority,
     candidate_id: kind === "candidate" ? id : null,
     application_id: kind === "application" ? id : null,
@@ -815,17 +822,16 @@ export async function setTodoDone(input: { todoId: string; done: boolean }): Pro
   return { ok: true };
 }
 
-/** Quick reschedule buttons. Moving an overdue item counts as a carry-over (in SQL). */
-export async function moveTodo(input: { todoId: string; to: "today" | "tomorrow" | "someday" }): Promise<{ ok: boolean }> {
+/** Quick reschedule buttons. Moving a late item counts as a carry-over (in SQL). */
+export async function moveTodo(input: { todoId: string; to: "today" | "tomorrow" }): Promise<{ ok: boolean }> {
   await requireUser();
-  const parsed = z.object({ todoId: uuid, to: z.enum(["today", "tomorrow", "someday"]) }).safeParse(input);
+  const parsed = z.object({ todoId: uuid, to: z.enum(["today", "tomorrow"]) }).safeParse(input);
   if (!parsed.success) return { ok: false };
   const today = todayIn();
   const { error } = await db().rpc("move_todo", {
     p_workspace_id: DEFAULT_WORKSPACE_ID,
     p_todo_id: parsed.data.todoId,
-    // generated types say string, but null (= Someday) is what SQL receives
-    p_due_date: resolveDue(parsed.data.to, today) as string,
+    p_due_date: resolveDue(parsed.data.to, today),
     p_today: today,
   });
   if (error) {
@@ -836,7 +842,7 @@ export async function moveTodo(input: { todoId: string; to: "today" | "tomorrow"
   return { ok: true };
 }
 
-/** "Move all to today": every open to-do from an earlier day. */
+/** "Move all to today": every open event from an earlier day. */
 export async function carryOverTodos(): Promise<{ ok: boolean; count?: number }> {
   await requireUser();
   const { data, error } = await db().rpc("carry_over_todos", {
