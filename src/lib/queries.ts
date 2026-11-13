@@ -3,6 +3,7 @@ import "server-only";
 import { connection } from "next/server";
 import { db, DEFAULT_WORKSPACE_ID } from "./supabase";
 import { requireUser } from "./auth";
+import { formatTime, todayIn, upcomingEvents, type IsoDate, type Priority, type Todo } from "./todos";
 
 // Every query starts with `await connection()`: it tells Next.js this data
 // belongs to the request, so it is never fetched (or frozen) at build time.
@@ -483,4 +484,92 @@ export async function getCompany(id: string): Promise<CompanyDetail | null> {
     .sort((a, b) => Number(a.stage.isFinal) - Number(b.stage.isFinal) || b.stage.sortOrder - a.stage.sortOrder);
 
   return { id: data.id, name: data.name, website: data.website, context: data.context, processes };
+}
+
+// ---------------------------------------------------------------------------
+// Upcoming events (to-dos) for the panel under the board
+// ---------------------------------------------------------------------------
+export type TodoLinkOption = { value: string; label: string };
+
+export type UpcomingData = {
+  today: IsoDate;
+  /** Open events in time order (late ones first) */
+  events: Todo[];
+  /** For the "Link to" picker: engineers and their active processes */
+  linkOptions: { engineers: TodoLinkOption[]; processes: TodoLinkOption[] };
+};
+
+type TodoRow = {
+  id: string;
+  title: string;
+  due_date: string;
+  due_time: string | null;
+  priority: Priority;
+  done_at: string | null;
+  carried_over: number;
+  candidate: { id: string; name: string; color: string } | null;
+  application: { id: string; role: string; company: { name: string }; candidate: { name: string; color: string } } | null;
+};
+
+export async function getUpcomingEvents(): Promise<UpcomingData> {
+  await connection();
+  await requireUser();
+  const today = todayIn();
+  const supabase = db();
+
+  const [todosRes, candsRes, appsRes] = await Promise.all([
+    supabase
+      .from("todos")
+      .select(`
+        id, title, due_date, due_time, priority, done_at, carried_over,
+        candidate:candidates ( id, name, color ),
+        application:applications ( id, role, company:companies ( name ), candidate:candidates ( name, color ) )
+      `)
+      .eq("workspace_id", DEFAULT_WORKSPACE_ID)
+      .is("done_at", null) // finished events leave the list
+      .not("due_date", "is", null),
+    supabase.from("candidates").select("id, name").eq("workspace_id", DEFAULT_WORKSPACE_ID).is("archived_at", null).order("name"),
+    supabase
+      .from("applications")
+      .select("id, role, company:companies ( name ), candidate:candidates!inner ( name, archived_at )")
+      .eq("workspace_id", DEFAULT_WORKSPACE_ID)
+      .is("archived_at", null)
+      .is("candidate.archived_at", null),
+  ]);
+  for (const r of [todosRes, candsRes, appsRes]) if (r.error) throw new Error(`Loading events failed: ${r.error.message}`);
+
+  const todos = (todosRes.data as unknown as TodoRow[]).map((t): Todo => ({
+    id: t.id,
+    title: t.title,
+    dueDate: t.due_date,
+    dueTime: formatTime(t.due_time),
+    priority: t.priority,
+    doneAt: t.done_at,
+    carriedOver: t.carried_over,
+    link: t.application
+      ? {
+          kind: "application",
+          id: t.application.id,
+          name: t.application.candidate.name,
+          color: t.application.candidate.color,
+          company: t.application.company.name,
+          role: t.application.role,
+        }
+      : t.candidate
+        ? { kind: "candidate", id: t.candidate.id, name: t.candidate.name, color: t.candidate.color }
+        : null,
+  }));
+
+  const processes = (appsRes.data as unknown as { id: string; role: string; company: { name: string }; candidate: { name: string } }[])
+    .map((a) => ({ value: `application:${a.id}`, label: `${a.candidate.name} · ${a.company.name} – ${a.role}` }))
+    .sort((a, b) => a.label.localeCompare(b.label));
+
+  return {
+    today,
+    events: upcomingEvents(todos), // pure: sorting rules live in src/lib/todos.ts
+    linkOptions: {
+      engineers: candsRes.data!.map((c) => ({ value: `candidate:${c.id}`, label: c.name })),
+      processes,
+    },
+  };
 }

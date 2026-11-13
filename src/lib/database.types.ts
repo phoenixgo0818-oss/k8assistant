@@ -408,6 +408,73 @@ export type Database = {
           },
         ]
       }
+      todos: {
+        Row: {
+          application_id: string | null
+          candidate_id: string | null
+          carried_over: number
+          created_at: string
+          done_at: string | null
+          due_date: string | null
+          due_time: string | null
+          id: string
+          priority: string
+          title: string
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          application_id?: string | null
+          candidate_id?: string | null
+          carried_over?: number
+          created_at?: string
+          done_at?: string | null
+          due_date?: string | null
+          due_time?: string | null
+          id?: string
+          priority?: string
+          title: string
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          application_id?: string | null
+          candidate_id?: string | null
+          carried_over?: number
+          created_at?: string
+          done_at?: string | null
+          due_date?: string | null
+          due_time?: string | null
+          id?: string
+          priority?: string
+          title?: string
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "todos_application_id_fkey"
+            columns: ["application_id"]
+            isOneToOne: false
+            referencedRelation: "applications"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "todos_candidate_id_fkey"
+            columns: ["candidate_id"]
+            isOneToOne: false
+            referencedRelation: "candidates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "todos_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       workspaces: {
         Row: {
           created_at: string
@@ -438,6 +505,10 @@ export type Database = {
           p_workspace_id: string
         }
         Returns: string
+      }
+      carry_over_todos: {
+        Args: { p_today: string; p_workspace_id: string }
+        Returns: number
       }
       create_application: {
         Args: {
@@ -504,6 +575,15 @@ export type Database = {
         Args: {
           p_direction: number
           p_stage_id: string
+          p_workspace_id: string
+        }
+        Returns: undefined
+      }
+      move_todo: {
+        Args: {
+          p_due_date: string
+          p_today: string
+          p_todo_id: string
           p_workspace_id: string
         }
         Returns: undefined

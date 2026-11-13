@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useId, useRef } from "react";
 
 /**
  * Native <dialog>: the browser handles focus trapping, Escape to close,
@@ -18,6 +18,7 @@ export function Modal({
   children: React.ReactNode;
 }) {
   const ref = useRef<HTMLDialogElement>(null);
+  const titleId = useId(); // names the dialog for screen readers ("New event, dialog")
 
   useEffect(() => {
     const dialog = ref.current;
@@ -29,13 +30,14 @@ export function Modal({
   return (
     <dialog
       ref={ref}
+      aria-labelledby={titleId}
       onClose={onClose} // Escape key
       onClick={(e) => e.target === ref.current && onClose()} // click on backdrop
       className="glass-strong m-auto w-[min(32rem,calc(100vw-2rem))] rounded-2xl p-0 text-slate-900 backdrop:bg-slate-900/30 backdrop:backdrop-blur-sm dark:text-slate-100"
     >
       <div className="p-5">
         <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-lg font-semibold">{title}</h2>
+          <h2 id={titleId} className="text-lg font-semibold">{title}</h2>
           <button
             type="button"
             onClick={onClose}

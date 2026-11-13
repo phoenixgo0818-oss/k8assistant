@@ -318,31 +318,37 @@ export function Board({
         {/* `relative` matters: absolutely positioned children (e.g. screen-reader
             text) are only clipped by a scroll container that is positioned.
             Without it they escaped and stretched the whole page sideways.
-            --col-w: one place to change the column width. */}
+            --col-w: one place to change the column width.
+            The board scrolls inside its own area (both ways), so the
+            Upcoming panel below it always stays on screen. The inner row is
+            at least as tall as the area (min-h-full) and grows with the
+            tallest column, so every column keeps the same height. */}
         <div
-          className="relative flex flex-1 gap-2 overflow-x-auto px-4 pb-6 [--col-w:10.5rem] sm:px-6"
+          className="relative min-h-0 flex-1 overflow-auto pb-3 [--col-w:10.5rem]"
           onPointerLeave={() => onSpotlight(null)}
         >
-          {view.map((column, i) => (
-            <Column
-              key={column.id}
-              column={column}
-              totalCount={filtering ? columns[i].cards.length : null}
-              isFirst={i === 0}
-              isLast={i === view.length - 1}
-              collapsed={collapsed.has(column.id)}
-              columnList={columnList}
-              lastDragEnd={lastDragEnd}
-              // pass the selection only to the column that holds it, so the
-              // others don't re-render when you open a different card
-              selectedId={column.cards.some((c) => c.id === selectedId) ? selectedId : undefined}
-              dropIndex={dropTarget?.columnId === column.id ? dropTarget.index : null}
-              onSpotlight={onSpotlight}
-              onCardUnmount={onCardUnmount}
-              onOpen={onOpen}
-            />
-          ))}
-          <AddColumnTile />
+          <div className="flex min-h-full w-max gap-2 px-4 sm:px-6">
+            {view.map((column, i) => (
+              <Column
+                key={column.id}
+                column={column}
+                totalCount={filtering ? columns[i].cards.length : null}
+                isFirst={i === 0}
+                isLast={i === view.length - 1}
+                collapsed={collapsed.has(column.id)}
+                columnList={columnList}
+                lastDragEnd={lastDragEnd}
+                // pass the selection only to the column that holds it, so the
+                // others don't re-render when you open a different card
+                selectedId={column.cards.some((c) => c.id === selectedId) ? selectedId : undefined}
+                dropIndex={dropTarget?.columnId === column.id ? dropTarget.index : null}
+                onSpotlight={onSpotlight}
+                onCardUnmount={onCardUnmount}
+                onOpen={onOpen}
+              />
+            ))}
+            <AddColumnTile />
+          </div>
         </div>
         <DragOverlay>
           {activeCard && (

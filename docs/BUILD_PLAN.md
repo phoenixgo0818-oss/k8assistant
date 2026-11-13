@@ -116,9 +116,9 @@ So the model changes:
 - **Test:** Signed out, every page redirects to `/login`; a wrong password or an account not on the allowlist can't get in.
 - **Done when:** only allowlisted accounts can see or change the board.
 
-### 3.2 Daily To-do ⬜
-- **Build:** `todos`: Today list, due date, priority, done, carry-over of unfinished items; optional link to a candidate or application.
-- **Done when:** you plan a real day in the app.
+### 3.2 Upcoming events (to-dos) on the board ⬜
+- **Build:** `todos` with a day, optional time, priority, done, carry-over count and an optional link to an engineer or a process. Shown under the board (about 30% of the height) as one list in time order: late items first, then today, then the coming days. Add, edit, tick off, move to Today/Tomorrow, "Move late to today". Demo events in `supabase/seed_events.sql` (dates relative to today).
+- **Done when:** you plan a real day from the board page.
 
 ### 3.3 Notes ⬜
 - **Build:** `notes` + `note_links`: Markdown, tags, pinning, links to candidates / applications / to-dos, full-text search.

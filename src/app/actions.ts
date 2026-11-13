@@ -12,6 +12,7 @@ import { z } from "zod";
 import { db, DEFAULT_WORKSPACE_ID } from "@/lib/supabase";
 import { requireUser } from "@/lib/auth";
 import { ENGINEER_COLORS, LABEL_COLORS } from "@/lib/constants";
+import { PRIORITIES, resolveDue, todayIn } from "@/lib/todos";
 
 export type FormState = {
   ok: boolean;
@@ -715,6 +716,159 @@ export async function deleteLabel(input: { labelId: string }): Promise<{ ok: boo
   if (error) {
     console.error("deleteLabel failed", error);
     return { ok: false, message: "Couldn't delete the label." };
+  }
+  refresh();
+  return { ok: true };
+}
+
+// ---------------------------------------------------------------------------
+// To-dos / events (step 3.2): shown in time order under the board
+// ---------------------------------------------------------------------------
+const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Pick a date").refine((d) => !Number.isNaN(Date.parse(d)), "Not a real date");
+
+const todoSchema = z
+  .object({
+    title: z.string().trim().min(1, "What needs doing?").max(200),
+    // The "When" picker: a shortcut, or "date" + the date input
+    due: z.enum(["today", "tomorrow", "date"]),
+    dueDate: z.string().optional(),
+    // Optional time of day; empty = any time that day
+    dueTime: z
+      .string()
+      .optional()
+      .transform((v) => v || null)
+      .pipe(z.union([z.null(), z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, "Not a valid time")])),
+    priority: z.enum(PRIORITIES),
+    // "" | "candidate:<uuid>" | "application:<uuid>"
+    link: z
+      .string()
+      .optional()
+      .transform((v) => v || "")
+      .pipe(z.union([z.literal(""), z.string().regex(/^(candidate|application):[0-9a-f-]{36}$/i, "Pick from the list")])),
+  })
+  .superRefine((v, ctx) => {
+    if (v.due === "date" && !isoDate.safeParse(v.dueDate).success) {
+      ctx.addIssue({ code: "custom", path: ["dueDate"], message: "Pick a date" });
+    }
+  });
+
+/** Form values → DB columns. "today"/"tomorrow" are resolved in the app's time zone. */
+function todoColumns(v: z.output<typeof todoSchema>) {
+  const [kind, id] = v.link ? v.link.split(":") : [null, null];
+  return {
+    title: v.title,
+    due_date: resolveDue(v.due === "date" ? v.dueDate! : v.due, todayIn()),
+    due_time: v.dueTime,
+    priority: v.priority,
+    candidate_id: kind === "candidate" ? id : null,
+    application_id: kind === "application" ? id : null,
+  };
+}
+
+const FOREIGN_KEY = "23503"; // the linked engineer/process no longer exists
+
+export async function createTodo(_prev: FormState, formData: FormData): Promise<FormState> {
+  await requireUser();
+  const parsed = todoSchema.safeParse(formValues(formData));
+  if (!parsed.success) return invalid(parsed.error);
+
+  const { error } = await db()
+    .from("todos")
+    .insert({ workspace_id: DEFAULT_WORKSPACE_ID, ...todoColumns(parsed.data) });
+  if (error) {
+    if (error.code === FOREIGN_KEY) return { ok: false, fieldErrors: { link: ["That engineer or process was removed"] } };
+    console.error("createTodo failed", error);
+    return { ok: false, message: "Couldn't save the to-do." };
+  }
+  refresh();
+  return { ok: true, submittedAt: Date.now() };
+}
+
+export async function updateTodo(_prev: FormState, formData: FormData): Promise<FormState> {
+  await requireUser();
+  const parsed = z.object({ todoId: uuid }).and(todoSchema).safeParse(formValues(formData));
+  if (!parsed.success) return invalid(parsed.error);
+
+  // Editing the date by hand is a deliberate re-plan, not a carry-over,
+  // so this is a plain update (moveTodo below is what counts carry-overs).
+  const { error } = await db()
+    .from("todos")
+    .update(todoColumns(parsed.data))
+    .eq("workspace_id", DEFAULT_WORKSPACE_ID)
+    .eq("id", parsed.data.todoId);
+  if (error) {
+    if (error.code === FOREIGN_KEY) return { ok: false, fieldErrors: { link: ["That engineer or process was removed"] } };
+    console.error("updateTodo failed", error);
+    return { ok: false, message: "Couldn't save the to-do." };
+  }
+  refresh();
+  return { ok: true, submittedAt: Date.now() };
+}
+
+export async function setTodoDone(input: { todoId: string; done: boolean }): Promise<{ ok: boolean }> {
+  await requireUser();
+  const parsed = z.object({ todoId: uuid, done: z.boolean() }).safeParse(input);
+  if (!parsed.success) return { ok: false };
+  const { error } = await db()
+    .from("todos")
+    .update({ done_at: parsed.data.done ? new Date().toISOString() : null })
+    .eq("workspace_id", DEFAULT_WORKSPACE_ID)
+    .eq("id", parsed.data.todoId);
+  if (error) {
+    console.error("setTodoDone failed", error);
+    return { ok: false };
+  }
+  refresh();
+  return { ok: true };
+}
+
+/** Quick reschedule buttons. Moving a late item counts as a carry-over (in SQL). */
+export async function moveTodo(input: { todoId: string; to: "today" | "tomorrow" }): Promise<{ ok: boolean }> {
+  await requireUser();
+  const parsed = z.object({ todoId: uuid, to: z.enum(["today", "tomorrow"]) }).safeParse(input);
+  if (!parsed.success) return { ok: false };
+  const today = todayIn();
+  const { error } = await db().rpc("move_todo", {
+    p_workspace_id: DEFAULT_WORKSPACE_ID,
+    p_todo_id: parsed.data.todoId,
+    p_due_date: resolveDue(parsed.data.to, today),
+    p_today: today,
+  });
+  if (error) {
+    console.error("moveTodo failed", error);
+    return { ok: false };
+  }
+  refresh();
+  return { ok: true };
+}
+
+/** "Move all to today": every open event from an earlier day. */
+export async function carryOverTodos(): Promise<{ ok: boolean; count?: number }> {
+  await requireUser();
+  const { data, error } = await db().rpc("carry_over_todos", {
+    p_workspace_id: DEFAULT_WORKSPACE_ID,
+    p_today: todayIn(),
+  });
+  if (error) {
+    console.error("carryOverTodos failed", error);
+    return { ok: false };
+  }
+  refresh();
+  return { ok: true, count: data };
+}
+
+export async function deleteTodo(input: { todoId: string }): Promise<{ ok: boolean }> {
+  await requireUser();
+  const parsed = z.object({ todoId: uuid }).safeParse(input);
+  if (!parsed.success) return { ok: false };
+  const { error } = await db()
+    .from("todos")
+    .delete()
+    .eq("workspace_id", DEFAULT_WORKSPACE_ID)
+    .eq("id", parsed.data.todoId);
+  if (error) {
+    console.error("deleteTodo failed", error);
+    return { ok: false };
   }
   refresh();
   return { ok: true };

@@ -33,7 +33,7 @@ doing it. I am new to coding.
 - Stack: Next.js (App Router) + TypeScript + Tailwind, Supabase (Postgres),
   Vercel, GitHub Actions; RabbitMQ (CloudAMQP) from Phase 4.
 - Board card = application (candidate × company × role), not a candidate.
-- Current phase: Phase 3 — To-do, Notes, Auth + Testing (Phase 2 done after PR for step 2.5).
+- Current phase: Phase 3 — Auth, Upcoming events, Notes + Testing (3.1 sign-in done).
 - Writes go through Server Actions (`src/app/actions.ts`, zod-validated) that
   call Postgres functions (RPC) so each change + its activity row is one transaction.
 - Production: https://k8assistant.vercel.app
@@ -48,6 +48,11 @@ doing it. I am new to coding.
 - Board performance: Column/SortableCard/ApplicationCard are memoised; hover
   spotlight is CSS via one <style> tag (no React state); the detail panel
   streams in a Suspense boundary while PanelPreview shows instantly.
+- Board page fits the window: the board scrolls inside its own area (top
+  ~70%) and the Upcoming events panel (`src/components/todos/`) fills the
+  bottom ~30%, streaming in its own Suspense boundary. "Today" uses
+  `APP_TIME_ZONE` in `src/lib/todos.ts`. Refresh demo event dates with
+  `npx supabase db query --linked -f supabase/seed_events.sql`.
 - Vercel functions run in lhr1 (London) next to Supabase eu-west-2 (vercel.json).
 - Local scratch (test scripts, screenshots) goes in git-ignored `.tmp/`.
 - Supabase project ref: iyusfcsxadcrnxwqrgxb (dev DB, fake data).
